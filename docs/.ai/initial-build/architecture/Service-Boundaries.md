@@ -67,10 +67,12 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 - Model-specific embeddings (AI Gateway owns)
 - Job data
 
-**State Transitions:**
-- PENDING → ENROLLING (when voice_profile.enroll work command published)
-- ENROLLING → ENROLLED (when Inference Worker reports success via PATCH /voices/{id}/status, Voice Profile publishes voice_profile.enrolled)
-- ENROLLING → FAILED (when Inference Worker reports failure via PATCH /voices/{id}/status, Voice Profile publishes voice_profile.enrollment_failed)
+**State Transitions (AC-ENR-001, FR-011):**
+- PENDING → QUALITY_CHECKING (when voice_profile.enroll work command published)
+- QUALITY_CHECKING → AWAITING_USER_OVERRIDE (if Inference Worker reports overrideable quality warning; triggers user UI notification)
+- AWAITING_USER_OVERRIDE → ENROLLING (after user acknowledges warning via PATCH /voices/{id}/quality-override)
+- QUALITY_CHECKING / ENROLLING → ENROLLED (when Inference Worker confirms quality pass and completion via PATCH /voices/{id}/status, Voice Profile publishes voice_profile.enrolled)
+- QUALITY_CHECKING / ENROLLING → FAILED (when Inference Worker reports hard quality failure via PATCH /voices/{id}/status, Voice Profile publishes voice_profile.enrollment_failed)
 - Any state → REVOKED (when user deletes or consent.revoked consumed)
 
 ---
@@ -95,10 +97,12 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 - Quotas (Usage & Policy owns)
 - Quota reservations (Usage & Policy Service owns)
 
-**Job Status Transitions:**
-- SUBMITTED (after quota reservation succeeds) → PROCESSING → COMPLETED / FAILED
-- SUBMITTED → CANCELLED (user cancel or profile revoked)
-- PROCESSING → CANCELLED (profile revoked mid-flight)
+**Job State Transitions (FR-022):**
+- QUEUED (after quota reservation succeeds) → PREPARING → RUNNING → POST_PROCESSING → COMPLETED (terminal)
+- QUEUED / PREPARING / RUNNING / POST_PROCESSING → FAILED (terminal, on Inference Worker failure)
+- QUEUED / PREPARING / RUNNING / POST_PROCESSING → CANCELLED (terminal, on user cancel or profile revoked)
+- QUEUED / PREPARING / RUNNING / POST_PROCESSING → FAILED (terminal, on Inference Worker failure)
+- QUEUED / PREPARING / RUNNING / POST_PROCESSING → CANCELLED (terminal, on user cancel or profile revoked)
 
 ---
 

@@ -7,12 +7,14 @@ Describe critical end-to-end workflows showing synchronous API calls, asynchrono
 
 **Domain Events** describe something that already happened. They are published for audit and eventual consistency (examples: `consent.recorded`, `narration_job.completed`, `voice_profile.enrolled`).
 
-**Work Commands** request a worker to perform something. They are published on a work queue consumed by async workers (examples: `voice_profile.enrollment_requested`, `narration_job.submitted`).
+**Work Commands** request a worker to perform something. They are published on a work queue consumed by async workers (examples: `voice_profile.enroll`, `narration.generate`).
 
-In this architecture:
-- `voice_profile.enrollment_requested` is a WORK COMMAND (to Inference Worker)
-- `voice_profile.enrolled` is a DOMAIN EVENT (for audit)
-- `narration_job.submitted` serves as both: WORK COMMAND (to Inference Worker) and DOMAIN EVENT (for audit)
+Key work commands and domain events in this architecture:
+- `voice_profile.enroll` is a WORK COMMAND (enrollment request to Inference Worker)
+- `voice_profile.enrolled`, `voice_profile.enrollment_failed`, `voice_profile.quality_warning` are DOMAIN EVENTS (for audit and lifecycle)
+- `narration.generate` is a WORK COMMAND (narration request to Inference Worker)
+- `narration_job.submitted` is a DOMAIN EVENT (not a work command; Worker consumes `narration.generate` instead)
+- `narration_job.started`, `narration_job.completed`, `narration_job.failed`, `narration_job.cancelled` are DOMAIN EVENTS
 
 ---
 
@@ -169,7 +171,7 @@ User (Client)
        └→ Client: Receives artifact_id
 ```
 
-### Step 2: Client Creates Voice Profile (Non-Terminal State)
+### Step 2: Client Creates Voice Profile (Pending Quality Check)
 
 ```
 User (Client)
@@ -189,16 +191,16 @@ User (Client)
             |   Confirm consent is active
             |
             +→ Create voice_profile record (enrollment_status: PENDING)
-            +→ Transition to ENROLLING state
+            +→ Transition to QUALITY_CHECKING state
             +→ Insert outbox record: {event: "voice_profile.enroll", profile_id, user_id, sample_artifact_ids}
             +→ Background publisher: Send voice_profile.enroll (WORK COMMAND) to work broker
             |
-            └→ Response: { profile_id, enrollment_status: ENROLLING }
+            └→ Response: { profile_id, enrollment_status: QUALITY_CHECKING }
        |
-       └→ Client: Profile created, waiting for enrollment to complete
+       └→ Client: Profile created, quality checks underway
 ```
 
-### Step 3: Inference Worker Processes Enrollment (Async)
+### Step 3: Inference Worker Performs Quality Assessment and Enrollment (Async, FR-011, AC-ENR-001)
 
 ```
 Message Broker (work topic)
@@ -208,12 +210,74 @@ Message Broker (work topic)
        +→ Retrieve enrollment work from message
        |   (profile_id, user_id, sample_artifact_ids)
        |
-       +→ Validate profile still in ENROLLING state (call Voice Profile Service)
+       +→ Validate profile still in QUALITY_CHECKING state (call Voice Profile Service)
        |
        +→ For each sample artifact:
        |   ├→ Call Artifact Service: GET /artifacts/{artifact_id}/metadata
        |   ├→ Download sample audio from signed URL (Artifact Service provides)
-       |   └→ Validate sample quality
+       |   └→ Analyze quality: clipping, silence, SNR, speech presence (FR-011)
+       |
+       +→ Quality Assessment (AC-ENR-001):
+       |   If HARD FAILURE (e.g., no speech detected):
+       |   ├→ Call Voice Profile Service: PATCH /voices/{profile_id}/status
+       |   |   { status: "FAILED", failure_reason: "hard_quality_failure" }
+       |   ├→ Voice Profile publishes: voice_profile.enrollment_failed
+       |   └→ Message Broker: Acknowledge (do not retry)
+       |
+       |   If OVERRIDEABLE WARNING (e.g., mild clipping):
+       |   ├→ Call Voice Profile Service: PATCH /voices/{profile_id}/status
+       |   |   {
+       |   |     status: "AWAITING_USER_OVERRIDE",
+       |   |     quality_findings: {
+       |   |       clipping: "mild (2-3 peaks)",
+       |   |       silence: "within acceptable range",
+       |   |       snr: "good (28 dB)",
+       |   |       speech_presence: "detected"
+       |   |     }
+       |   |   }
+       |   ├→ Voice Profile Service persists quality findings
+       |   ├→ Voice Profile publishes: voice_profile.quality_warning
+       |   ├→ Client receives notification with actionable feedback
+       |   └→ Message Broker: Acknowledge
+       |
+       |   If PASS:
+       |   ├→ Continue to enrollment (see below)
+```
+
+**User Reviews Quality Warning and Decides (AC-ENR-001):**
+
+```
+User (Client)
+  |
+  +→ Receives quality-warning notification with actionable feedback
+  |
+  +→ UI presents warning:
+  |   "Mild clipping detected (2-3 peaks). 
+  |    This may cause artifacts in very quiet passages.
+  |    Recommended: Re-record. Or: Override and proceed?"
+  |
+  +→ User chooses:
+       Option A: "Re-record" → return to sample upload (Flow 3, Step 1)
+       Option B: "Proceed anyway" → calls Voice Profile Service
+            |
+            +→ Voice Profile Service: PATCH /voices/{profile_id}/quality-override
+            |   { override_reason: "user_acknowledged_risk" }
+            |   |
+            |   +→ Voice Profile transitions AWAITING_USER_OVERRIDE → ENROLLING
+            |   +→ Voice Profile publishes back to work broker: voice_profile.enroll (WORK COMMAND)
+            |   |   with override_acknowledged: true
+            |   |
+            |   └→ Response: { profile_id, status: ENROLLING }
+       |
+       └→ Client: Quality-checking retry in progress
+```
+
+**Inference Worker Completes Enrollment (After Quality Pass or User Override):**
+
+```
+Message Broker (work topic)
+  |
+  +→ Inference Worker (consumes voice_profile.enroll with override_acknowledged flag, or re-queued)
        |
        +→ Extract speaker embeddings/features from samples
        |
@@ -221,30 +285,30 @@ Message Broker (work topic)
        |   {
        |     operation: "enroll",
        |     profile_id: profile_id,
+       |     model_id: "current_approved_model",
        |     samples: <sample_features>
        |   }
        |   |
-       |   +→ AI Gateway performs model-specific enrollment
-       |   +→ Returns provider-specific speaker_id, conditioning metadata
+       |   +→ AI Gateway performs model-specific enrollment with selected model
+       |   +→ Returns provider-specific speaker_id, conditioning metadata, model_version
        |
-       +→ AI Gateway stores: speaker_conditioning (profile_id, model_id, model_speaker_id, conditioning_reference)
+       +→ AI Gateway stores: speaker_conditioning (profile_id, model_id, model_speaker_id, model_version, conditioning_reference)
        |
        +→ Call Voice Profile Service: PATCH /voices/{profile_id}/status
        |   {
        |     status: "ENROLLED",
        |     model_version: "v2.1",
-       |     quality_score: 0.92
+       |     quality_pass: true,
+       |     quality_override_used: <boolean>,
+       |     enrolled_at: timestamp
        |   }
        |   |
        |   +→ Voice Profile Service transitions ENROLLING → ENROLLED
-       |   +→ Voice Profile Service inserts outbox: {event: "voice_profile.enrolled", profile_id, ...}
+       |   +→ Voice Profile Service stores model_version in profile metadata (FR-012, AC-HIST-001)
+       |   +→ Voice Profile Service inserts outbox: {event: "voice_profile.enrolled", profile_id, model_version, ...}
        |   +→ Background publisher: Send voice_profile.enrolled DOMAIN EVENT
        |
        └→ Message Broker: Acknowledge work item
-```
-
-**If Enrollment Fails:**
-
 ```
 Inference Worker
   |
@@ -321,15 +385,20 @@ User (Client)
             |       Job is NOT created
             |
             +→ IF reservation succeeded:
-            |   ├→ Create narration_job record (status: SUBMITTED)
-            |   ├→ Store: reservation_id, idempotency_key, request snapshot
+            |   ├→ Create narration_job record (status: QUEUED, per FR-022)
+            |   ├→ Store: reservation_id, idempotency_key, job snapshot including:
+            |   |   - profile_id, model_version (FR-023, AC-HIST-001)
+            |   |   - script_snapshot, generation_params, language
+            |   |   - estimated_duration_seconds, estimated_cost_usd
+            |   |   - created_at, submission_timestamp
+            |   |
             |   ├→ Insert outbox records:
-            |   |   - {event: "narration_job.submitted", job_id, profile_id, ...}
+            |   |   - {event: "narration_job.submitted", job_id, profile_id, model_version, ...}
             |   |   - {command: "narration.generate", job_id, ...} (WORK COMMAND)
             |   ├→ Background publisher: Send narration.generate to work broker
             |   ├→ Background publisher: Send narration_job.submitted to audit broker
             |   |
-            |   └→ Response: { job_id, status: SUBMITTED, polling_url }
+            |   └→ Response: { job_id, status: QUEUED, polling_url }
        |
        └→ Client: Poll job status OR subscribe to completion event
 ```
@@ -361,7 +430,7 @@ Usage & Policy Service
 
 ## Flow 5: Narration Inference and Execution
 
-### Inference Worker Processes Job
+### Inference Worker Processes Job (FR-022, FR-023, AC-GEN-001)
 
 ```
 Message Broker (work topic)
@@ -371,16 +440,23 @@ Message Broker (work topic)
        +→ Retrieve job_id from work command
        |
        +→ Call Narration Orchestrator: GET /jobs/{job_id}/work-item
-       |   Returns: { job_id, script, profile_id, generation_params, ... }
+       |   Returns: { job_id, script, profile_id, model_version, generation_params, ... }
+       |
+       +→ Call Narration Orchestrator: PATCH /jobs/{job_id}/status { status: "PREPARING" }
+       |   (Orchestrator transitions QUEUED → PREPARING)
        |
        +→ Call Voice Profile Service: GET /voices/validate/{profile_id}
        |   Confirm profile still ENROLLED (not revoked mid-flight)
        |   If revoked: Call Narration Orchestrator: POST /jobs/{job_id}/fail
+       |              with reason: "profile_revoked"
        |              (Worker does NOT publish job events; Orchestrator does)
        |
        +→ Linguistic Chunking:
-       |   Split script into manageable chunks
+       |   Split script into manageable chunks per FR-025
        |   (chunk size and boundaries per approved requirements)
+       |
+       +→ Call Narration Orchestrator: PATCH /jobs/{job_id}/status { status: "RUNNING" }
+       |   (Orchestrator transitions PREPARING → RUNNING)
        |
        +→ For each chunk:
        |   |
@@ -389,22 +465,27 @@ Message Broker (work topic)
        |   |     operation: "narration",
        |   |     profile_id: profile_id,
        |   |     text: chunk,
+       |   |     model_version: job.model_version,
        |   |     generation_params: { speech_pace, pause_strength }
        |   |   }
        |   |   |
        |   |   +→ AI Gateway:
        |   |   |   Retrieve model-specific speaker conditioning
-       |   |   |   Invoke model provider with text + speaker_id
-       |   |   |   Return: audio_bytes
+       |   |   |   Invoke model provider with text + speaker_id + model params
+       |   |   |   Return: audio_bytes, duration, cost
        |   |   |
-       |   |   └→ Response: { audio_bytes, duration_seconds }
+       |   |   └→ Response: { audio_bytes, duration_seconds, cost_usd }
        |   |
        |   +→ Handle inference failures (retry up to N times with backoff)
+       |   +→ If all retries fail, abandon chunks and report failure
        |   +→ Store chunk audio to assembly buffer
        |
        +→ Audio Assembly:
-       |   Concatenate chunks into seamless output
+       |   Concatenate chunks into seamless output per FR-025
        |   Validate output format and duration
+       |
+       +→ Call Narration Orchestrator: PATCH /jobs/{job_id}/status { status: "POST_PROCESSING" }
+       |   (Orchestrator transitions RUNNING → POST_PROCESSING)
        |
        +→ Call Artifact Service: POST /artifacts/upload
        |   {
@@ -422,24 +503,25 @@ Message Broker (work topic)
        |
        +→ Call Narration Orchestrator: POST /jobs/{job_id}/complete
        |   {
-       |     status: "COMPLETED",
        |     output_artifact_id: artifact_id,
        |     duration_seconds: <actual_output_duration>,
-       |     actual_cost_usd: <cost_from_AI_gateway>
+       |     actual_cost_usd: <total_cost_from_AI_gateway>
        |   }
        |   |
-       |   +→ Narration Orchestrator (Worker does NOT publish events; Orchestrator owns this):
-       |   |   - Update job status: COMPLETED
-       |   |   - Store output_artifact_id
-       |   |   - Call Usage & Policy Service: POST /quotas/commit-usage
+       |   +→ Narration Orchestrator (Worker does NOT publish events; Orchestrator owns this - FR-045):
+       |   |   - Call Usage & Policy Service: POST /quotas/commit-usage (IDEMPOTENT)
        |   |     {
        |   |       reservation_id: res_xyz,
        |   |       actual_usage: duration_seconds,
        |   |       actual_cost: actual_cost_usd
        |   |     }
-       |   |   - Usage & Policy commits actual cost to reservation (idempotent)
-       |   |   - Narration Orchestrator inserts outbox: {event: "narration_job.completed", job_id, ...}
-       |   |   - Background publisher: Send narration_job.completed event
+       |   |   - If commit fails: Return error; Worker retries
+       |   |   - If commit succeeds/idempotent: Continue to next step
+       |   |
+       |   |   - Update job status: COMPLETED (only AFTER usage committed)
+       |   |   - Store output_artifact_id in job snapshot
+       |   |   - Insert outbox: {event: "narration_job.completed", job_id, model_version, output_artifact_id, actual_cost, ...}
+       |   |   - Background publisher: Send narration_job.completed event (audit only, not for usage trigger)
        |   |
        |   └→ Response: { job_id, status: COMPLETED }
        |
@@ -455,8 +537,7 @@ Inference Worker
   |
   +→ Call Narration Orchestrator: POST /jobs/{job_id}/fail
        {
-         status: "FAILED",
-         failure_reason: "inference_failed | cost_exceeds_budget",
+         failure_reason: "inference_failed | profile_revoked | model_capability_mismatch",
          error_message: "Model inference timeout after 3 retries"
        }
        |
@@ -483,7 +564,10 @@ Inference Worker
 - Artifact Service owns: binary storage
 - AI Gateway owns: model inference
 
-**Asynchronous Path:** narration.generate (WORK COMMAND) → Inference execution → narration_job.completed/failed (DOMAIN EVENTS published by Orchestrator)
+**Asynchronous Path:** narration.generate (WORK COMMAND) → Inference execution → narration_job.started/completed/failed (DOMAIN EVENTS published by Orchestrator)
+
+**Job Status Progression (FR-022, AC-GEN-001):**
+QUEUED → PREPARING → RUNNING → POST_PROCESSING → COMPLETED (or FAILED/CANCELLED at any point)
 
 ---
 
@@ -501,7 +585,7 @@ User (Client)
             +→ Validate user_id ownership
             +→ Return job status and details
             |
-            └→ Response: { job_id, status: SUBMITTED|PROCESSING|COMPLETED|FAILED|CANCELLED, ... }
+            └→ Response: { job_id, status: QUEUED|PREPARING|RUNNING|POST_PROCESSING|COMPLETED|FAILED|CANCELLED, model_version, ... }
        |
        └→ Client: If status == COMPLETED, request download
 ```
@@ -564,15 +648,15 @@ User (Client)
        └→ Client: Profile revoked
 ```
 
-### Cascade 1: Narration Orchestrator Receives Event
+### Cascade 1: Narration Orchestrator Receives Event (AC-RET-001, R-DEL-001)
 
 ```
 Message Broker (event topic)
   |
   +→ Narration Orchestrator (consumes voice_profile.revoked)
        |
-       +→ Query all jobs where profile_id == revoked_profile AND status IN [SUBMITTED, PROCESSING]
-       +→ For each such job:
+       +→ Query all jobs where profile_id == revoked_profile AND status IN [QUEUED, PREPARING, RUNNING, POST_PROCESSING]
+       +→ For each active job:
        |   ├→ Call Usage & Policy Service: POST /quotas/release-reservation
        |   |   { reservation_id: job.reservation_id }
        |   |   (restores quota on cancellation)
@@ -581,7 +665,16 @@ Message Broker (event topic)
        |   ├→ Insert outbox: {event: "narration_job.cancelled", job_id, ...}
        |   └→ Background publisher: Send narration_job.cancelled event
        |
-       └→ Continue processing next event
+       +→ Query all historical jobs where profile_id == revoked_profile AND status == COMPLETED
+       +→ For each completed job (AC-RET-001, R-DEL-001):
+       |   ├→ Extract output_artifact_id from job snapshot
+       |   ├→ Call Artifact Service batch-delete: POST /artifacts/batch-delete
+       |   |   { artifact_ids: [output_artifact_id_1, ...], reason: "profile_revoked" }
+       |   |   (Artifact Service purges generated audio immediately, overriding retention)
+       |   |
+       |   └→ Artifact Service publishes: artifact.deleted events
+       |
+       └→ Continue processing
 ```
 
 ### Cascade 2: Artifact Service Receives Event
@@ -592,13 +685,13 @@ Message Broker (event topic)
   +→ Artifact Service (consumes voice_profile.revoked)
        |
        +→ For each sample_artifact_id in voice_profile.revoked event:
-       |   ├→ Call Artifact Service cleanup: DELETE artifact
-       |   |   (Approved requirement: samples must be deleted on revocation)
+       |   ├→ Delete artifact immediately (overrides retention policy per AC-RET-001)
+       |   |   (Approved requirement: samples must be purged immediately on revocation)
        |   |
-       |   └→ Insert outbox: {event: "artifact.deleted", artifact_id, ...}
+       |   └→ Insert outbox: {event: "artifact.deleted", artifact_id, reason: "profile_revoked", ...}
        |       Background publisher: Send artifact.deleted event
        |
-       └→ Continue processing
+       +→ Continue processing (wait for Orchestrator cascade to request generated-audio deletion)
 ```
 
 ### Cascade 3: AI Gateway Receives Event

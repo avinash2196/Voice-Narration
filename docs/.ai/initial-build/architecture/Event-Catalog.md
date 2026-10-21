@@ -168,7 +168,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 **Note:** References artifact IDs only; Worker retrieves binary samples via Artifact Service API. Script/sensitive data not included in message.
 
 #### voice_profile.enrolled
-**Publisher:** Voice Profile Service (via background outbox publisher, after Worker completes)
+**Publisher:** Voice Profile Service (via background outbox publisher, after Worker completes and profile reaches ENROLLED)
 **Subscribers:** Audit Service
 **Payload:**
 ```json
@@ -184,16 +184,18 @@ Define all domain events and work commands, their publishers, subscribers, paylo
     "profile_id": "prof_1",
     "user_id": "usr_123",
     "voice_name": "My Professional Voice",
+    "model_version": "v2.1",
+    "quality_override_used": false,
     "enrolled_at": "2026-10-19T12:00:30Z"
   }
 }
 ```
-**Note:** Does NOT include speaker_embedding, quality_score, or model-specific data (AI Gateway owns)
+**Note:** Includes model_version (FR-012, AC-HIST-001); does NOT include speaker_embedding or model-specific data (AI Gateway owns)
 **Delivery Guarantee:** At-least-once
 **Retention:** 2 years
 
 #### voice_profile.enrollment_failed
-**Publisher:** Voice Profile Service (via background outbox publisher, after Worker reports failure)
+**Publisher:** Voice Profile Service (via background outbox publisher, after Worker reports hard quality failure or inference failure)
 **Subscribers:** Audit Service
 **Payload:**
 ```json
@@ -208,7 +210,8 @@ Define all domain events and work commands, their publishers, subscribers, paylo
   "data": {
     "profile_id": "prof_1",
     "user_id": "usr_123",
-    "failure_reason": "insufficient_sample_quality | model_inference_error",
+    "failure_reason": "hard_quality_failure | model_inference_error",
+    "failure_message": "No speech detected in samples",
     "failed_at": "2026-10-19T12:00:30Z"
   }
 }
@@ -216,9 +219,41 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 **Delivery Guarantee:** At-least-once
 **Retention:** 2 years
 
+#### voice_profile.quality_warning (NEW, AC-ENR-001)
+**Publisher:** Voice Profile Service (via background outbox publisher, when Worker detects overrideable quality warnings)
+**Subscribers:** Audit Service, Client/UI (for notification)
+**Payload:**
+```json
+{
+  "event_type": "voice_profile.quality_warning",
+  "event_id": "evt_<uuid>",
+  "timestamp": "2026-10-19T12:00:15Z",
+  "actor_id": "usr_123",
+  "resource_id": "prof_1",
+  "resource_type": "VoiceProfile",
+  "version": "1",
+  "data": {
+    "profile_id": "prof_1",
+    "user_id": "usr_123",
+    "quality_findings": {
+      "clipping": "mild (2-3 peaks)",
+      "silence": "within acceptable range",
+      "snr": "good (28 dB)",
+      "speech_presence": "detected"
+    },
+    "recommendation": "Re-record for best quality, or override to proceed",
+    "overrideable": true,
+    "warning_at": "2026-10-19T12:00:15Z"
+  }
+}
+```
+**Note:** Actionable findings for user notification; stored in Voice Profile Service for user review
+**Delivery Guarantee:** At-least-once
+**Retention:** 90 days
+
 #### voice_profile.revoked
 **Publisher:** Voice Profile Service (via background outbox publisher)
-**Subscribers:** Narration Orchestrator (cancels jobs), Artifact Service (deletes samples), AI Gateway (purges conditioning), Audit Service
+**Subscribers:** Narration Orchestrator (cancels jobs, identifies generated audio), Artifact Service (deletes samples and generated audio per AC-RET-001), AI Gateway (purges conditioning), Audit Service
 **Payload:**
 ```json
 {
@@ -238,18 +273,18 @@ Define all domain events and work commands, their publishers, subscribers, paylo
   }
 }
 ```
-**Note:** Includes sample_artifact_ids for Artifact Service cleanup (no other sensitive data)
+**Note:** Includes sample_artifact_ids for Artifact Service cleanup; does not include generated-audio artifact IDs (Orchestrator coordinates that separately per AC-RET-001)
 **Delivery Guarantee:** At-least-once (must reach all subscribers)
 **Latency:** <3 seconds
 **Retention:** 2 years
-**Critical:** Triggers cascades; each subscriber is idempotent
+**Critical:** Triggers cascades; each subscriber is idempotent; revocation overrides all retention policies
 
 ---
 
 ### Narration Job Events
 
 #### narration.generate (WORK COMMAND)
-**Publisher:** Narration Orchestrator (via background outbox publisher, after job SUBMITTED)
+**Publisher:** Narration Orchestrator (via background outbox publisher, when job enters QUEUED state per FR-022)
 **Subscribers:** Inference Worker (consumes from work broker)
 **Payload:**
 ```json
@@ -271,10 +306,10 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 **Purpose:** WORK COMMAND to Inference Worker (narration request)
 **Delivery Guarantee:** At-least-once
 **Latency:** <1 second
-**Note:** Minimal payload (job_id, profile_id, language). Worker retrieves full script and params via GET /jobs/{job_id}/work-item from Narration Orchestrator. No script/sensitive data in message.
+**Note:** Minimal payload (job_id, profile_id, language). Worker retrieves full script, params, and model_version via GET /jobs/{job_id}/work-item from Narration Orchestrator. No script/sensitive data in message.
 
 #### narration_job.submitted (DOMAIN EVENT)
-**Publisher:** Narration Orchestrator (via background outbox publisher)
+**Publisher:** Narration Orchestrator (via background outbox publisher, when quota reservation succeeds and job enters QUEUED state per FR-022)
 **Subscribers:** Audit Service
 **Payload:**
 ```json
@@ -290,6 +325,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
     "job_id": "job_456",
     "user_id": "usr_123",
     "profile_id": "prof_1",
+    "model_version": "v2.1",
     "language": "hindi",
     "generation_params": {
       "speech_pace": 1.0,
@@ -302,14 +338,14 @@ Define all domain events and work commands, their publishers, subscribers, paylo
   }
 }
 ```
-**Purpose:** DOMAIN EVENT (audit only). Worker does NOT consume this; Worker consumes narration.generate command instead.
+**Purpose:** DOMAIN EVENT (audit only, not a worker command). Worker consumes narration.generate command instead, not this event.
 **Delivery Guarantee:** At-least-once
 **Latency:** <1 second
 **Retention:** 30 days (job history), then archived
-**Note:** Does NOT include script
+**Note:** Includes model_version snapshot (FR-023, AC-HIST-001); does NOT include script
 
 #### narration_job.started
-**Publisher:** Narration Orchestrator (after Inference Worker calls PATCH /status)
+**Publisher:** Narration Orchestrator (via outbox, when Worker transitions job from QUEUED to PREPARING/RUNNING per FR-022)
 **Subscribers:** Audit Service
 **Payload:**
 ```json
@@ -324,6 +360,11 @@ Define all domain events and work commands, their publishers, subscribers, paylo
   "data": {
     "job_id": "job_456",
     "user_id": "usr_123",
+    "started_at": "2026-10-19T12:00:30Z",
+    "current_state": "PREPARING | RUNNING"
+  }
+}
+    "user_id": "usr_123",
     "started_at": "2026-10-19T12:00:30Z"
   }
 }
@@ -332,7 +373,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 **Retention:** 30 days
 
 #### narration_job.completed
-**Publisher:** Narration Orchestrator (via background outbox publisher, after job completes and usage committed)
+**Publisher:** Narration Orchestrator (via background outbox publisher, after job reaches COMPLETED state per FR-022 and usage is successfully committed to Usage & Policy Service)
 **Subscribers:** Audit Service
 **Payload:**
 ```json
@@ -348,6 +389,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
     "job_id": "job_456",
     "user_id": "usr_123",
     "profile_id": "prof_1",
+    "model_version": "v2.1",
     "output_artifact_id": "art_gen_1",
     "output_duration_seconds": 125,
     "actual_cost_usd": 12.50,
@@ -355,12 +397,12 @@ Define all domain events and work commands, their publishers, subscribers, paylo
   }
 }
 ```
-**Note:** Does NOT include script or audio binary (references artifact_id only)
+**Note:** Includes model_version snapshot (FR-023, AC-HIST-001); does NOT include script or audio binary (references artifact_id only)
 **Delivery Guarantee:** At-least-once
 **Idempotency:** Orchestrator ensures single event publication per job completion
 **Latency:** <2 seconds
 **Retention:** 30 days (active), 2 years (archived)
-**Important:** Usage commitment happens BEFORE this event is published (synchronously in POST /jobs/{job_id}/complete). This event is for audit only, not to trigger usage recording.
+**CRITICAL (FR-045):** Usage commitment (POST /quotas/commit-usage) is synchronous and MUST complete successfully BEFORE this event is published. This event is for audit and lifecycle only, NOT to trigger usage recording. Usage & Policy Service does NOT consume this event for usage-commit purposes.
 
 #### narration_job.failed
 **Publisher:** Narration Orchestrator (via background outbox publisher, after Worker reports failure)

@@ -60,23 +60,28 @@ This architecture supports:
 **Events:** consent.recorded, consent.revoked
 
 ### 3. Voice Profile Service
-**Owns:** Logical voice-profile lifecycle and metadata, profile-to-consent and profile-to-artifact references.
+**Owns:** Logical voice-profile lifecycle and metadata (including model/version reference per FR-012), profile-to-consent and profile-to-artifact references, quality assessment results and user overrides (AC-ENR-001).
 
 **Does not own:** Raw audio storage, artifact binary content, consent records, model-specific embeddings/conditioning.
 
 **Public API:**
-- POST /voices (creates profile in ENROLLING state, publishes voice_profile.enroll work command)
+- POST /voices (creates profile in PENDING state)
 - GET /voices
 - DELETE /voices/{profile_id}
 
 **Internal API:**
 - GET /voices/validate/{profile_id}
-- PATCH /voices/{profile_id}/status (for Inference Worker to report completion/failure)
+- PATCH /voices/{profile_id}/status (for Inference Worker to report quality assessment, user-override decision, or completion/failure)
+- PATCH /voices/{profile_id}/quality-override (for user to acknowledge warning and override enrollment block)
+
+**Profile State Lifecycle (AC-ENR-001):**
+`PENDING` → `QUALITY_CHECKING` → (`AWAITING_USER_OVERRIDE` [if overrideable warning] OR `ENROLLING`) → `ENROLLED` / `FAILED` / `REVOKED`
 
 **Events Published:**
-- voice_profile.enroll (WORK COMMAND, when profile created; triggers Inference Worker)
-- voice_profile.enrolled (DOMAIN EVENT, after Worker completes enrollment)
-- voice_profile.enrollment_failed (DOMAIN EVENT, if Worker reports failure)
+- voice_profile.enroll (WORK COMMAND, when profile transitions to QUALITY_CHECKING; triggers Inference Worker for quality assessment)
+- voice_profile.enrolled (DOMAIN EVENT, after Worker completes enrollment and profile reaches ENROLLED)
+- voice_profile.enrollment_failed (DOMAIN EVENT, if Worker reports hard quality failure)
+- voice_profile.quality_warning (DOMAIN EVENT, if Worker reports overrideable quality warning; triggers user UI notification)
 - voice_profile.revoked (DOMAIN EVENT, when user deletes or consent revoked)
 
 **Events Consumed:**
@@ -100,16 +105,20 @@ This architecture supports:
 - POST /jobs/{job_id}/complete (Worker reports completion; Orchestrator commits usage)
 - POST /jobs/{job_id}/fail (Worker reports failure; Orchestrator releases reservation)
 
+**Job State Lifecycle (FR-022):**
+Canonical states: `QUEUED` → `PREPARING` → `RUNNING` → `POST_PROCESSING` → `COMPLETED` (terminal)
+Terminal states: `FAILED`, `CANCELLED`
+
 **Events Published:**
-- narration.generate (WORK COMMAND, after job SUBMITTED)
-- narration_job.submitted (DOMAIN EVENT, only after quota reservation succeeds)
-- narration_job.started
-- narration_job.completed (published by Orchestrator after usage committed)
-- narration_job.failed
-- narration_job.cancelled
+- narration.generate (WORK COMMAND, when job created in QUEUED state)
+- narration_job.submitted (DOMAIN EVENT, when quota reservation succeeds and job enters QUEUED)
+- narration_job.started (DOMAIN EVENT, when job transitions from QUEUED to PREPARING/RUNNING)
+- narration_job.completed (DOMAIN EVENT, when job reaches COMPLETED state, after usage committed)
+- narration_job.failed (DOMAIN EVENT, when job reaches FAILED state, reservation released)
+- narration_job.cancelled (DOMAIN EVENT, when job reaches CANCELLED state)
 
 **Events Consumed:**
-- voice_profile.revoked (cancels jobs using that profile)
+- voice_profile.revoked (cancels QUEUED/PREPARING/RUNNING jobs using that profile, releases reservations, publishes narration_job.cancelled; coordinates with Artifact Service to purge generated audio artifacts per AC-RET-001)
 - user.deleted (cancels user's active jobs, releases reservations)
 
 ### 5. Artifact Service
@@ -127,7 +136,11 @@ This architecture supports:
 - POST /artifacts/batch-delete
 - GET /artifacts/{artifact_id}/metadata
 
-**Events:** artifact.stored, artifact.deleted (consumes voice_profile.revoked)
+**Events:** artifact.stored, artifact.deleted
+
+**Events Consumed:**
+- voice_profile.revoked (deletes/purges samples per revocation requirements, overriding retention policy per AC-RET-001)
+- user.deleted (purges user's samples, generated audio, and other artifacts per R-DEL-001)
 
 ### 6. Usage & Policy Service
 **Owns:** Quotas, rate-limit policy, usage accounting, budget enforcement, quota reservations.
@@ -149,7 +162,7 @@ This architecture supports:
 - usage.recorded (after job completion, actual usage committed)
 
 **Events Consumed:**
-- narration_job.completed (usage commitment trigger)
+- user.deleted (cascade: archive user's quota and usage)
 
 ### 7. AI Gateway
 **Owns:** Approved-model routing, model capability validation, provider credentials, model-specific speaker conditioning, provider-side artifacts, normalized inference interface.

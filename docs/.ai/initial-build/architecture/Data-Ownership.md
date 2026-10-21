@@ -61,19 +61,23 @@ Define which service owns each data entity, responsibility boundaries, and lifec
 
 ### Voice Profile Service
 **Owns and is responsible for:**
-- Voice profile logical lifecycle (PENDING → ENROLLING → ENROLLED, or → FAILED, or → REVOKED)
+- Voice profile logical lifecycle (PENDING → QUALITY_CHECKING → [AWAITING_USER_OVERRIDE] → ENROLLING → ENROLLED, or → FAILED, or → REVOKED per AC-ENR-001)
 - Profile-to-consent linkage (reference only, Consent Service validates)
 - Profile-to-sample linkage (reference only, Artifact Service owns binary)
+- Profile metadata including approved model/version reference (FR-012)
+- Quality assessment results and user-override decisions (AC-ENR-001)
 - Publishing enrollment request to Worker
-- Accepting enrollment completion/failure from Worker
-- Publishing final enrollment events (enrolled, enrollment_failed, revoked)
+- Accepting enrollment completion/failure/quality-warning from Worker
+- Publishing final enrollment events (enrolled, enrollment_failed, quality_warning, revoked)
 - Consuming consent.revoked and revoking affected profiles
 
 **Must guarantee:**
 - Profile cannot exist without valid consent
+- Profile metadata records the model/model-version used for enrollment (FR-012, AC-HIST-001)
+- Quality findings are persisted when requiring user decision (not ephemeral)
 - Sample artifact IDs are validated with Artifact Service
-- Revocation cascades immediately to Narration Orchestrator (event-driven)
-- Enrollment state transitions are only PENDING→ENROLLING (on API call), ENROLLING→ENROLLED (Worker success), or ENROLLING→FAILED (Worker failure)
+- Revocation cascades immediately to Narration Orchestrator and Artifact Service (event-driven)
+- Enrollment state transitions follow approved lifecycle (AC-ENR-001)
 - Profile remains immutable after REVOKED state
 
 **Model-Specific Conditioning:** AI Gateway owns this data exclusively; Voice Profile Service does NOT store embeddings or provider-specific conditioning
@@ -82,14 +86,15 @@ Define which service owns each data entity, responsibility boundaries, and lifec
 
 ### Narration Orchestrator
 **Owns and is responsible for:**
-- Job lifecycle state (SUBMITTED, PROCESSING, COMPLETED, FAILED, CANCELLED)
+- Job lifecycle state (QUEUED, PREPARING, RUNNING, POST_PROCESSING, COMPLETED, FAILED, CANCELLED per FR-022)
 - Job idempotency (deduplication by idempotency_key)
+- Job snapshots including model/model-version used for that job (FR-023, AC-HIST-001)
 - Quota reservation coordination (call Usage & Policy before accepting job)
 - Job retries at workflow level (re-submission to Inference Worker on failure)
 - Job history and durable state (survives service restarts)
 
 **Must guarantee:**
-- Each job transitions through valid states only
+- Each job transitions through valid states only (FR-022 compliance)
 - Idempotency is enforced (same request = same response, even after retry)
 - Job state is durable (survives service restarts)
 - Job cannot reference deleted or revoked profiles (validation on submission)
@@ -205,40 +210,59 @@ Define which service owns each data entity, responsibility boundaries, and lifec
 3. For each affected profile:
    - Voice Profile Service transitions to REVOKED state
    - Voice Profile Service publishes: voice_profile.revoked
-4. Narration Orchestrator consumes: voice_profile.revoked → cancels SUBMITTED/PROCESSING jobs
-5. Artifact Service consumes: voice_profile.revoked → deletes/expires samples per approved retention rules (revocation overrides retention policy)
-6. AI Gateway consumes: voice_profile.revoked → purges model-specific conditioning, embeddings
+4. Narration Orchestrator consumes: voice_profile.revoked → cancels QUEUED/PREPARING/RUNNING/POST_PROCESSING jobs, releases reservations
+5. Artifact Service consumes: voice_profile.revoked → deletes/purges ALL associated artifacts (samples AND generated narration audio linked to jobs using this profile per AC-RET-001), overriding retention policy
+6. AI Gateway consumes: voice_profile.revoked → purges model-specific conditioning, embeddings, cached artifacts
 7. Audit Service consumes: all events in sequence
 
-**Key:** Consent Service does NOT know profile ownership; Voice Profile Service determines cascade
+**Key:** Consent Service does NOT know profile ownership; Voice Profile Service determines cascade. Generated audio purging must be coordinated with Narration Orchestrator to identify applicable job artifacts.
 
 ### When Voice Profile is Revoked (Event: voice_profile.revoked)
 **Sequence:**
 1. Voice Profile Service transitions profile to REVOKED
-2. Voice Profile Service publishes: voice_profile.revoked
-3. Narration Orchestrator consumes: cancels SUBMITTED/PROCESSING jobs using this profile
+2. Voice Profile Service publishes: voice_profile.revoked with sample_artifact_ids
+3. Narration Orchestrator consumes: 
+   - Cancels QUEUED/PREPARING/RUNNING/POST_PROCESSING jobs using this profile
    - Publishes: narration_job.cancelled
-4. Artifact Service consumes: deletes/expires samples linked to this profile immediately (revocation overrides retention policy)
-   - Publishes: artifact.deleted (if deleted immediately)
+   - Identifies historical job output_artifact_ids and requests deletion from Artifact Service
+4. Artifact Service consumes:
+   - Deletes/purges sample artifacts per revocation override (AC-RET-001)
+   - On receipt of historical job artifacts from Orchestrator, deletes those generated audio artifacts immediately (AC-RET-001, R-DEL-001)
+   - Publishes: artifact.deleted for each artifact removed
 5. AI Gateway consumes: purges provider-specific conditioning, embeddings, cached model artifacts
 6. Audit Service consumes: records all events
 
-**Key:** Revocation takes precedence over retention policies; samples are purged/expired immediately
+**Key:** Revocation takes precedence over all retention policies. Generated narration audio tied to revoked profiles must be purged immediately. Artifact Service must be able to delete artifacts by ID supplied by Narration Orchestrator.
 
-### When Job is Completed
-**Event:** `narration_job.completed` published by Narration Orchestrator
-- Usage & Policy Service: Record usage and deduct from user quota
-- Artifact Service: Set retention timer on generated audio
-- Audit Service: Record completion event
+### When Job is Completed (Event: narration_job.completed)
+**Sequence (FR-045, FR-023 compliance):**
+1. Inference Worker completes inference, calls Narration Orchestrator: POST /jobs/{job_id}/complete
+2. Narration Orchestrator:
+   - Calls Usage & Policy Service: POST /quotas/commit-usage (idempotent, using reservation_id)
+   - Only after commit succeeds, updates job status to COMPLETED
+   - Stores job snapshot (profile_id, model_version, generation_params, output_artifact_id, cost, timestamps)
+   - Inserts outbox: `narration_job.completed` event
+   - Background publisher sends event
+3. Consumers of narration_job.completed:
+   - Usage & Policy Service: No consumption as trigger (usage already committed synchronously)
+   - Artifact Service: Set retention timer on generated_audio artifact
+   - Audit Service: Record completion event
 
-### When User is Deleted (User Requested)
-**Event:** `user.deleted` published by Auth Service
-- Consent Service: Soft-delete user's consent records
-- Voice Profile Service: Delete user's voice profiles and revoke
-- Narration Orchestrator: Mark user's jobs as cancelled/archived
-- Artifact Service: Delete or purge all user's artifacts (samples, audio)
-- Usage & Policy Service: Archive user's quota and usage records
-- Audit Service: Archive user's audit trail
+**Key:** Usage is committed synchronously in step 2 by Orchestrator, not triggered by event. The event is for audit only.
+
+### When User is Deleted (Event: user.deleted)
+**Sequence:**
+1. Auth Service publishes: user.deleted
+2. Cascade consumers (parallel, eventual consistency):
+   - Consent Service: Soft-delete user's consent records per approved retention policy
+   - Voice Profile Service: Revoke all user profiles (triggers voice_profile.revoked cascades)
+   - Narration Orchestrator: Cancel all active jobs, release reservations
+   - Artifact Service: Delete/purge all user's artifacts (samples, generated audio) per approved deletion requirements (R-DEL-001)
+   - Usage & Policy Service: Archive/deactivate user's quota and usage state
+   - Audit Service: Archive user's audit trail
+3. Each cascade is idempotent (safe for duplicate event delivery)
+
+**Key:** All consumers must be idempotent and able to identify their user's data independently. No sequential ordering required (eventual consistency).
 
 ---
 
