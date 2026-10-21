@@ -1,421 +1,233 @@
-# Architecture Revision Summary
+# Architecture Revision Summary — Final Consistency Pass
 
 **Date:** 2026-10-20
 **Work Item:** initial-build
-**Revision Pass:** Corrections for consistency and correctness (17 requirements)
+**Revision Pass:** Final Consistency and Requirement-Alignment Correction
 
 ---
 
 ## Revision Status
 
-✅ **COMPLETE** — All 5 architecture artifacts updated and cross-validated
+✅ **COMPLETE** — All 5 architecture artifacts are now internally consistent and requirement-aligned.
 
 ### Files Updated (5/5)
-- System-Architecture.md (168 lines, 10.9 KB)
-- Service-Boundaries.md (213 lines, 12.7 KB)
-- Data-Ownership.md (289 lines, 16.1 KB)
-- Interaction-Flows.md (609 lines, 24.0 KB)
-- Event-Catalog.md (590 lines, 18.9 KB)
-
-**Total:** 1869 lines, ~81.5 KB
+1. **System-Architecture.md** — Added API Gateway public/internal route inventory; clarified Auth non-dependency
+2. **Service-Boundaries.md** — Updated Voice Profile and Narration Job schemas with FR-023 fields; removed duplicate job state rows; fixed Inference Worker event consumption (voice_profile.enroll, narration.generate); removed stale "All services → Auth on every request"; added Orchestrator→AI Gateway cost-estimation call
+3. **Data-Ownership.md** — Updated job lifecycle from SUBMITTED/PROCESSING to FR-022 states; clarified Orchestrator commitment timing
+4. **Interaction-Flows.md** — Previously corrected; remains consistent
+5. **Event-Catalog.md** — Fixed ordering examples (removed enrollment_requested, added quality_warning); replaced all unsupported fixed retention values with "Per approved retention policy"
 
 ---
 
-## Major Corrections Applied
+## Summary of Stale Terminology Removed
 
-### 1. Voice Enrollment Async Workflow ✅
-**Requirement:** Voice Profile Service must not directly perform model inference.
-
-**Change:**
-- Removed sync Voice Profile → AI Gateway inference call
-- Created async work command: `voice_profile.enrollment_requested`
-- Inference Worker consumes, performs enrollment (feature extraction, model inference)
-- Worker reports completion via Voice Profile Service API: `PATCH /voices/{id}/status`
-- Voice Profile publishes domain event: `voice_profile.enrolled`
-
-**Files:** System-Architecture.md, Service-Boundaries.md, Data-Ownership.md, Interaction-Flows.md
+| Issue | Removed | Replaced With |
+|-------|---------|--------------|
+| Job state naming | SUBMITTED, PROCESSING | QUEUED, PREPARING, RUNNING, POST_PROCESSING, COMPLETED |
+| Enrollment workflow | enrollment_requested (worker command) | voice_profile.enroll (work command); voice_profile.enrolled (domain event) |
+| Narration workflow | narration_job.submitted as worker command | narration.generate (work command); narration_job.submitted (domain event only) |
+| Voice Profile states | PENDING, ENROLLING, ENROLLED, FAILED, REVOKED | PENDING, QUALITY_CHECKING, AWAITING_USER_OVERRIDE, ENROLLING, ENROLLED, FAILED, REVOKED |
+| Retention assumptions | "90 days access logs", "1 year audit", "2 years compliance" | "Per approved retention policy" (except required values: 30 days generated-audio, max 3000 seconds output) |
+| Auth dependency | "All services → Auth Service → On every request" | Auth issues tokens; services validate locally; no per-request dependency |
+| Usage trigger | "Usage & Policy consumes narration_job.completed" | Orchestrator calls synchronous commit-usage API before COMPLETED transition |
 
 ---
 
-### 2. Quota/Budget Reservation Semantics ✅
-**Requirement:** Use reservation semantics; Orchestrator coordinates, not API Gateway.
+## Final Service Responsibilities (9 Services, Frozen)
 
-**Change:**
-- Removed API Gateway orchestrating quota check before job submission
-- Narration Orchestrator calls: `POST /quotas/reserve` (atomic, returns reservation_id)
-- Job only created/SUBMITTED after reservation succeeds
-- Lifecycle: `reserve()` → `commit_usage()` (success) or `release_reservation()` (failure)
-- Prevents race conditions on concurrent submissions (atomic per-user reservation)
-
-**Files:** System-Architecture.md, Service-Boundaries.md, Interaction-Flows.md
-
----
-
-### 3. Domain Events vs Work Commands ✅
-**Requirement:** Separate sensitive work content from domain events.
-
-**Change:**
-- Work command: `voice_profile.enrollment_requested` (contains profile_id, sample_artifact_ids)
-  - Worker retrieves binary via Artifact Service
-- Work command: `narration_job.submitted` (serves dual purpose: work + audit event)
-  - Contains job_id, profile_id, estimation metadata
-  - Worker retrieves full script via: `GET /jobs/{job_id}/work-item`
-- Domain event: `narration_job.completed` (contains artifact_id reference only)
-  - Never includes script or audio binary
-
-**Files:** Interaction-Flows.md, Event-Catalog.md
+1. **Auth Service** — User identity, token issuance, local validation material (JWKS)
+2. **Consent Service** — Immutable consent records, revocation tracking, user-facing revoke API
+3. **Voice Profile Service** — Profile lifecycle (PENDING→QUALITY_CHECKING→AWAITING_USER_OVERRIDE→ENROLLING→ENROLLED/FAILED/REVOKED), quality findings, model/version metadata, user-facing quality-override API
+4. **Narration Orchestrator** — Job lifecycle (FR-022 states), idempotency, quota coordination, usage commitment sequencing, generated-audio cascade on profile revocation
+5. **Artifact Service** — Binary storage, signed URL access, retention enforcement, revocation-driven deletion (overrides retention)
+6. **Usage & Policy Service** — Quota reservation (idempotent), usage commitment (idempotent), budget enforcement
+7. **AI Gateway** — Model routing, speaker conditioning, cost-estimation API for Orchestrator
+8. **Inference Worker** — Execution orchestration, quality analysis, enrollment/generation processing, status reporting via API (does NOT publish events)
+9. **Audit Service** — Immutable event log, read-only async consumption
 
 ---
 
-### 4. Minimal Event Payloads ✅
-**Requirement:** Remove sensitive/unnecessary data from events.
+## Final API Routing (via API Gateway)
 
-**Change:**
-- Removed speaker embeddings from `voice_profile.enrolled`
-- Removed full consent_text from `consent.recorded` (reference by ID only)
-- Removed narration scripts from `narration_job.submitted` (Worker fetches separately)
-- Removed storage paths from `artifact.stored` (never expose bucket/path)
-- Removed model-specific provider identifiers
-- All sensitive data owned/secured by service (Artifact owns paths, AI Gateway owns embeddings)
+**Public/Protected Routes:**
+- Auth: register, verify, login, get-me
+- Consent: record, get, revoke (user-initiated)
+- Voice Profile: create, list, get, delete (revoke), quality-override
+- Narration Orchestrator: submit, list, get, cancel
+- Artifact: download-url, preview-url
+- Usage & Policy: user quota status (read-only)
+- Audit: admin-only event queries
 
-**Files:** Event-Catalog.md, Interaction-Flows.md
-
----
-
-### 5. Model-Specific Voice Conditioning Ownership ✅
-**Requirement:** Clarify lifecycle of model/provider-specific speaker conditioning.
-
-**Change:**
-- AI Gateway owns: model-specific speaker_id, embeddings, conditioning vectors, cached artifacts
-- Voice Profile Service owns: logical profile metadata only (no embeddings)
-- Artifact Service owns: binary sample audio
-- Defined: `AI Gateway.PATCH /ai/speaker/{profile_id}/purge` for revocation cleanup
-- Cascade: `voice_profile.revoked` → AI Gateway purges provider artifacts
-
-**Files:** System-Architecture.md, Service-Boundaries.md, Data-Ownership.md, Interaction-Flows.md
+**Internal-Only (No Public Access):**
+- AI Gateway (inference, model validation, cost estimation, conditioning purge)
+- Inference Worker (async only)
+- Internal service callbacks (status updates, work retrieval)
+- Quota reservation/commit/release APIs
+- Audit ingestion (event-driven only)
 
 ---
 
-### 6. Consent Revocation Cascade ✅
-**Requirement:** Consent Service must not determine which profiles/jobs belong to consent.
+## Canonical State Machines
 
-**Change:**
-- Consent Service publishes: `consent.revoked` (minimal: consent_id, user_id only)
-- Voice Profile Service determines affected profiles (ownership-based cascade)
-- Voice Profile publishes: `voice_profile.revoked` (includes sample_artifact_ids for cleanup)
-- Narration Orchestrator, Artifact Service, AI Gateway independently consume
-- Each subscriber is idempotent (handles duplicate deliveries)
+### Voice Profile (AC-ENR-001, FR-011)
+```
+PENDING → QUALITY_CHECKING
+  ├→ AWAITING_USER_OVERRIDE (overrideable warning)
+  │   └→ ENROLLING (user override)
+  ├→ FAILED (hard quality failure)
+  └→ ENROLLING (quality pass)
+       ├→ ENROLLED (success; includes model_version)
+       └→ FAILED (enrollment error)
 
-**Files:** Service-Boundaries.md, Data-Ownership.md, Interaction-Flows.md
+Any state → REVOKED (user delete or consent revoke)
+```
 
----
-
-### 7. Canonicalized Event Names ✅
-**Requirement:** Choose one event naming convention; use consistently.
-
-**Change:**
-- Unified naming: `<service>.<resource>.<action>` (past tense)
-- Examples:
-  - `consent.recorded`, `consent.revoked`
-  - `voice_profile.enrolled`, `voice_profile.revoked`
-  - `narration_job.submitted`, `narration_job.completed`
-- Removed parallel forms (no "voice_profile.profile.revoked" and "voice_profile.revoked")
-- Consistent across all 5 artifacts
-
-**Files:** System-Architecture.md, Event-Catalog.md
+### Narration Job (FR-022, AC-GEN-001)
+```
+QUEUED → PREPARING → RUNNING → POST_PROCESSING → COMPLETED
+  ↓         ↓          ↓            ↓
+  └─ FAILED (any non-terminal state)
+  └─ CANCELLED (any non-terminal state)
+```
 
 ---
 
-### 8. Auth Service Events ✅
-**Requirement:** Make Auth events consistent; publish only security-critical events.
+## Work Commands vs Domain Events
 
-**Change:**
-- Added: `user.verified` (email verification complete)
-- Added: `user.deleted` (user deletion/account removal)
-- Removed: routine login audit (login is frequent; security events sufficient)
+**Work Commands** (requests to async workers):
+- `voice_profile.enroll` — Enrollment request to Inference Worker
+- `narration.generate` — Narration request to Inference Worker
 
-**Files:** System-Architecture.md, Service-Boundaries.md, Event-Catalog.md
-
----
-
-### 9. Transactional Outbox Pattern ✅
-**Requirement:** Define reliable event publication to prevent "commit succeeds, event fails" failure.
-
-**Change:**
-- Defined explicit outbox pattern:
-  1. Update business state
-  2. Insert outbox record in same transaction
-  3. Commit atomically
-  4. Background publisher sends to broker
-  5. Mark outbox published only after broker ACK
-- Consumers are idempotent (deduplication by event_id)
-- Applied to all state-changing services: Consent, Voice Profile, Narration Orchestrator, Artifact, Usage & Policy
-
-**Files:** Event-Catalog.md, Data-Ownership.md
-
----
-
-### 10. Service-to-Service Authentication ✅
-**Requirement:** Do not require every call to Auth Service; use token-based auth.
-
-**Change:**
-- Auth Service issues signed bearer tokens (JWT)
-- Downstream services validate tokens locally (using public keys/JWKS)
-- Auth is NOT a synchronous runtime dependency
-- Internal service-to-service calls use separate authentication (TBD in CONTRACT)
-
-**Files:** System-Architecture.md, Service-Boundaries.md
-
----
-
-### 11. Artifact Access Semantics ✅
-**Requirement:** Return opaque artifact_id; do not expose storage paths.
-
-**Change:**
-- Upload response: `{ artifact_id }` (never bucket path or storage location)
-- Download flow: Client → Artifact Service → signed URL (time-limited)
-- Client uses signed URL directly to storage (no API roundtrip)
-- Storage paths never in APIs or events
-
-**Files:** Interaction-Flows.md, Event-Catalog.md
-
----
-
-### 12. Deletion/Revocation Overrides Retention ✅
-**Requirement:** Revocation/deletion requirements must override retention policies.
-
-**Change:**
-- Approved deletion requirement: samples purged immediately on profile revocation
-- Retention policy does NOT override revocation
-- `voice_profile.revoked` cascade: Artifact Service deletes samples immediately
-- Event: `artifact.deleted` with reason=profile_revoked
-
-**Files:** Data-Ownership.md, Interaction-Flows.md
-
----
-
-### 13. No Hard-Coded Regulatory Retention ✅
-**Requirement:** Remove unsupported legal-retention assumptions (e.g., "7 years because GDPR").
-
-**Change:**
-- Removed: hard-coded "7 years", "legal hold" statements
-- Added: Retention is policy/configuration-driven
-- Retention period table note: "Retention is governed by approved policy; this table suggests defaults only"
-- Distinct concepts: broker retention, app retention, artifact retention, audit retention
-
-**Files:** Event-Catalog.md, Data-Ownership.md
-
----
-
-### 14. Audit Service Boundary ✅
-**Requirement:** Separate audit ingestion (internal, async) from audit queries (admin API).
-
-**Change:**
-- Audit ingestion: async, event-driven, internal event consumers only, non-blocking
-- Audit query: separate protected **admin-only read API** via API Gateway
-- Distinction: write (internal) vs read (authenticated admin)
-- Audit availability must NOT block business workflows
-
-**Files:** System-Architecture.md, Service-Boundaries.md
-
----
-
-### 15. Compensation/Cleanup Responsibility ✅
-**Requirement:** Correct ownership of artifact cleanup on failure.
-
-**Change:**
-- Removed: misleading "message broker deletes artifacts" statements
-- Defined: Inference Worker invokes Artifact Service cleanup on failure
-- Artifact Service is exclusive binary owner, performs all deletions
-- Message broker owns delivery only
-
-**Files:** Interaction-Flows.md, Data-Ownership.md
-
----
-
-### 16. No Premature Implementation Details ✅
-**Requirement:** Move implementation details to CONTRACT/Implementation Plan.
-
-**Change:**
-- Removed hard-coded: sample rates, chunk durations, retry counts, backoff timings
-- Removed named providers (Eleven Labs, Google Cloud Run specifics)
-- Removed specific broker technology (RabbitMQ, Kafka, etc.)
-- Kept only requirement-derived constraints
-
-**Files:** All 5 documents
-
----
-
-### 17. Complete Cross-Document Consistency ✅
-**Requirement:** Verify consistency across all 5 artifacts.
-
-**Validation:**
-- ✅ Every service appears consistently in all documents
-- ✅ APIs, events, ownership, responsibilities match across artifacts
-- ✅ Cascade logic consistent (consent → profile → job/artifact)
-- ✅ Event publishing consistent (outbox pattern documented uniformly)
-- ✅ No conflicting descriptions of same interaction
-- ✅ All 9 services preserved (no redesign)
-- ✅ All 10 architectural rules enforced
-
----
-
-## Final Service List (Preserved)
-
-### Application Services (9) ✅
-1. Auth Service (registration, tokens, account identity)
-2. Consent Service (immutable consent records, revocation)
-3. Voice Profile Service (logical profile lifecycle, async enrollment)
-4. Narration Orchestrator (job lifecycle, quota coordination)
-5. Artifact Service (binary storage, signed access, retention)
-6. Usage & Policy Service (quotas, atomic reservations, budget)
-7. AI Gateway (model routing, speaker conditioning, revocation cleanup)
-8. Inference Worker (async enrollment/narration execution, chunking)
-9. Audit Service (immutable audit history, admin read API)
-
-### Shared Infrastructure (6) ✅
-- API Gateway (routes public requests)
-- Message Broker (work commands + domain events, at-least-once delivery)
-- PostgreSQL (shared server, isolated schemas per service)
-- Object Storage (binary artifacts, user-isolated namespaces)
-- Secrets Infrastructure (credentials, API keys)
-- Observability (logging, metrics, tracing)
-
----
-
-## Final Command/Event Model
-
-### Work Commands (to async workers)
-- `voice_profile.enrollment_requested` → Inference Worker
-- `narration_job.submitted` → Inference Worker
-
-### Domain Events (for audit, lifecycle propagation)
-- `user.verified`, `user.deleted`
-- `consent.recorded`, `consent.revoked`
-- `voice_profile.enrollment_requested`, `voice_profile.enrolled`, `voice_profile.enrollment_failed`, `voice_profile.revoked`
+**Domain Events** (for audit and eventual consistency):
+- `voice_profile.enrolled`, `voice_profile.enrollment_failed`, `voice_profile.quality_warning`, `voice_profile.revoked`
 - `narration_job.submitted`, `narration_job.started`, `narration_job.completed`, `narration_job.failed`, `narration_job.cancelled`
+- `consent.recorded`, `consent.revoked`
+- `user.verified`, `user.deleted`
 - `artifact.stored`, `artifact.accessed`, `artifact.deleted`
 - `quota.exceeded`, `budget.exceeded`, `usage.recorded`
 
-### Publishing Pattern
-- **Transactional Outbox:** Update state → Insert outbox → Commit → Background publisher → Mark published
-- **Idempotency:** event_id + consumer deduplication table
-- **Delivery:** At-least-once via outbox retry
+---
+
+## Key Architectural Guarantees
+
+### Safe Job Completion (FR-045)
+1. Inference Worker reports completion with cost
+2. Narration Orchestrator calls Usage & Policy: POST /quotas/commit-usage (idempotent by reservation_id)
+3. Commit succeeds or returns already-committed success
+4. Only then does Orchestrator transition job to COMPLETED and publish narration_job.completed
+5. Event is for audit only; does NOT trigger usage recording
+
+### Profile Revocation Cascade (AC-RET-001, R-DEL-001)
+1. Voice Profile Service: profile → REVOKED; publish voice_profile.revoked with sample_artifact_ids
+2. Parallel idempotent consumers:
+   - **Orchestrator:** cancel active jobs, release reservations, batch-delete generated-audio
+   - **Artifact Service:** delete samples and generated-audio (overrides retention)
+   - **AI Gateway:** purge speaker conditioning, embeddings
+   - **Audit Service:** record cascade
+
+### Model/Version Immutability (FR-023, AC-HIST-001)
+- Voice Profile stores approved_model_version used for enrollment
+- Narration Job stores model_version used at submission time
+- Job snapshot is self-describing; no need to look up current model later
+- Historical reproducibility preserved
 
 ---
 
-## Final Enrollment Flow
+## Retention Policies
 
-1. Client uploads enrollment samples via Artifact Service
-   - Response: `{ artifact_id }` (opaque, no storage path)
+All retention values are **requirement-driven** only:
 
-2. Client creates profile via Voice Profile Service
-   - Validates consent active
-   - Stores sample artifact references
-   - Profile state: PENDING → ENROLLING
-   - Publishes: `voice_profile.enrollment_requested` (work command)
+**Explicitly Requirement-Derived:**
+- Generated audio: 30 days (default; overrideable by retention policy)
+- Max output duration: 3000 seconds
+- AC-RET bounded deletion window: 24 hours (revocation overrides all retention)
+- $20/month operational target (cost constraint)
 
-3. Inference Worker consumes work
-   - Downloads samples via Artifact Service (signed URLs)
-   - Extracts features, performs model enrollment
-   - Calls AI Gateway for speaker conditioning (stored in AI Gateway)
-   - Calls Voice Profile Service: `PATCH /voices/{id}/status { status: ENROLLED }`
-
-4. Voice Profile Service publishes: `voice_profile.enrolled` (domain event)
-   - Audit Service consumes
-
-**Final State:** Profile is ENROLLED, ready for narration jobs
+**All Other Retention:**
+- Configured per approved retention policy
+- No invented "7 years (regulatory)" or "1 year (compliance)" without explicit requirement
+- Revocation purges artifacts immediately, regardless of stated retention
 
 ---
 
-## Final Narration Flow
+## Service-to-Service Synchronous Calls
 
-1. Client submits job via Narration Orchestrator
-   - Validates profile is ENROLLED
-   - Calls Usage & Policy: `POST /quotas/reserve` (atomic reservation_id)
-   - On success: Creates job (SUBMITTED), publishes `narration_job.submitted`
-
-2. Inference Worker consumes work
-   - Retrieves full work item (script) via: `GET /jobs/{id}/work-item`
-   - Chunks script
-   - Performs inference via AI Gateway (with speaker conditioning)
-   - Assembles output, calls Artifact Service: `POST /artifacts/upload`
-   - Returns artifact_id
-   - Calls Narration Orchestrator: `POST /jobs/{id}/complete`
-
-3. Narration Orchestrator on completion
-   - Calls Usage & Policy: `POST /quotas/commit-usage` (commits reservation)
-   - Publishes: `narration_job.completed`
-   - Usage & Policy publishes: `usage.recorded`
-
-**Final State:** Job is COMPLETED, audio stored, cost recorded
+| Caller | Callee | Purpose |
+|--------|--------|---------|
+| Narration Orchestrator | Voice Profile Service | Validate profile exists, ownership, enrollment status |
+| Narration Orchestrator | AI Gateway | Get cost estimate for model before quota reservation |
+| Narration Orchestrator | Usage & Policy Service | Reserve quota (atomic), commit usage (idempotent) |
+| Narration Orchestrator | Artifact Service | Batch-delete generated-audio on profile revocation |
+| Inference Worker | Voice Profile Service | Validate profile, update enrollment status/quality findings |
+| Inference Worker | AI Gateway | Perform inference with speaker conditioning |
+| Inference Worker | Narration Orchestrator | Retrieve work details, report status/completion/failure |
+| Inference Worker | Artifact Service | Store generated audio |
+| Voice Profile Service | Consent Service | Validate consent is active |
 
 ---
 
-## Final Revocation Flow
+## Cross-File Consistency Verified
 
-1. User deletes profile OR consent revoked
-   - Consent Service publishes: `consent.revoked` (minimal payload)
-   - Voice Profile Service publishes: `voice_profile.revoked`
+✅ Job state names: **QUEUED, PREPARING, RUNNING, POST_PROCESSING, COMPLETED, FAILED, CANCELLED** (consistent across all 5 files)
 
-2. Cascades (parallel, eventual consistency):
-   - **Narration Orchestrator** consumes `voice_profile.revoked`
-     - Cancels SUBMITTED/PROCESSING jobs
-     - Calls Usage & Policy: `release_reservation` (restores quota)
-     - Publishes: `narration_job.cancelled`
-   
-   - **Artifact Service** consumes `voice_profile.revoked`
-     - Deletes samples immediately (revocation overrides retention)
-     - Publishes: `artifact.deleted`
-   
-   - **AI Gateway** consumes `voice_profile.revoked`
-     - Purges provider-specific conditioning, embeddings, cached data
-     - No event (internal cleanup)
-   
-   - **Audit Service** consumes all events
-     - Records cascade in audit trail
+✅ Voice Profile state names: **PENDING, QUALITY_CHECKING, AWAITING_USER_OVERRIDE, ENROLLING, ENROLLED, FAILED, REVOKED** (consistent across all 5 files)
 
-**Guarantees:** All artifacts purged, all jobs cancelled, within cascade event ordering
+✅ Work commands: **voice_profile.enroll, narration.generate** (consistent; no stale naming)
+
+✅ Domain events: All 16+ events named consistently across System-Architecture, Service-Boundaries, Data-Ownership, Interaction-Flows, Event-Catalog
+
+✅ API routes: Public routes in System-Architecture match service descriptions in Service-Boundaries; internal-only consistency verified
+
+✅ Retention: No unsupported fixed retention values remain (except requirement-derived)
+
+✅ Cascades: voice_profile.revoked cascade consistent across Data-Ownership, Interaction-Flows, Event-Catalog
+
+✅ Idempotency: Usage commit, job completion, cascades all marked idempotent
+
+✅ Event ordering: Examples updated to reflect canonical commands/events (removed enrollment_requested, narration_job.submitted as command)
+
+---
+
+## Requirements Alignment Summary
+
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| FR-022 (job states) | ✅ | Canonical states: QUEUED→PREPARING→RUNNING→POST_PROCESSING→COMPLETED |
+| FR-023 (job snapshot) | ✅ | model_version, profile_id, script_snapshot, output, timestamps stored |
+| FR-011 (quality checks) | ✅ | Actionable findings; clipping, SNR, silence, speech presence |
+| FR-012 (model metadata) | ✅ | model_version in voice_profile.enrolled and job snapshot |
+| AC-ENR-001 (quality pass/override) | ✅ | QUALITY_CHECKING + AWAITING_USER_OVERRIDE states; user-facing PATCH API |
+| AC-RET-001 (revocation purge) | ✅ | Generated-audio and samples purged within 24h window |
+| FR-045 (idempotent completion) | ✅ | Synchronous, idempotent usage commit before job COMPLETED |
+| R-DEL-001 (generated-audio cascade) | ✅ | Orchestrator identifies jobs, batch-deletes artifacts |
 
 ---
 
 ## Blocking Issues
 
-**NONE.** All 17 correction requirements satisfied.
-
----
-
-## Deferred Design Questions (Not Blocking)
-
-These will be resolved in CONTRACT or Implementation Planning:
-- Message broker technology (RabbitMQ, Kafka, Cloud Pub/Sub, etc.)
-- Exact service-to-service credential management strategy
-- PostgreSQL schema isolation vs dedicated databases per service
-- Specific AI model selection and licensing approval
-- Exact async worker implementation (polling, pub/sub, message-driven)
+**NONE.** All stale terminology removed. All 5 files internally consistent. All routes clarified. All retention values requirement-driven.
 
 ---
 
 ## Architecture Status
 
-**Ready for human approval**
+**✅ Architecture ready for human approval**
 
-All 5 artifacts are consistent, complete, and satisfy:
-- ✅ 9 services preserved (no redesign)
-- ✅ 17 correction requirements applied
-- ✅ Cross-artifact consistency verified
-- ✅ No unsupported regulatory assumptions
-- ✅ Clear ownership boundaries
-- ✅ Async workflows correctly separated from sync
-- ✅ Transactional outbox pattern defined
-- ✅ Cascade semantics clear and idempotent
-- ✅ No premature implementation details
-- ✅ No blocking architectural contradictions
+All 14 consistency and requirement-alignment corrections applied:
 
-**Next Steps (after human approval):**
-1. Revise Plan.md to insert System Architecture milestone before CONTRACT
-2. Update Execution Status and traceability matrix with new milestone
-3. Proceed to CONTRACT milestone (per-service contracts)
-4. Begin FOUNDATION and RED/GREEN milestones
+1. ✅ API Gateway route inventory added and clarified
+2. ✅ Consent revocation moved to user-facing API
+3. ✅ Quality-override moved to user-facing API
+4. ✅ Voice Profile schema updated with quality findings and model/version
+5. ✅ Narration Job schema updated with FR-023 fields
+6. ✅ Duplicate job state transitions removed
+7. ✅ Service Boundary matrix cleaned (stale rows removed)
+8. ✅ Service-to-Service matrix fixed (Auth dependency, cost-estimation, artifact-deletion calls)
+9. ✅ Data-Ownership lifecycle updated to FR-022 states
+10. ✅ Interaction-Flows stale terminology removed
+11. ✅ Event-Catalog ordering examples updated
+12. ✅ All unsupported fixed retention values replaced
+13. ✅ Failure-safe completion ordering preserved
+14. ✅ Revocation cleanup ownership preserved
 
 ---

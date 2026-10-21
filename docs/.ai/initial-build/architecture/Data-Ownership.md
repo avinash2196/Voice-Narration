@@ -15,7 +15,7 @@ Define which service owns each data entity, responsibility boundaries, and lifec
 | profile_enrollment_state | Voice Profile Service | voice_profile | Owned by Voice Profile; Inference Worker updates via PATCH /voices/{profile_id}/status | Voice Profile, Inference Worker |
 | voice_enrollment_samples | Artifact Service (binary), Voice Profile Service (metadata reference) | Artifact metadata in artifact schema | Created during enrollment; retained until profile deleted/revoked | Voice Profile Service (references by ID), Artifact Service (owns binary) |
 | model_speaker_conditioning | AI Gateway | ai_gateway | Created during enrollment (Worker→AI Gateway); purged on voice_profile.revoked | AI Gateway exclusively |
-| narration_job | Narration Orchestrator | orchestrator | Create on submission; progress through states (SUBMITTED→PROCESSING→COMPLETED/FAILED/CANCELLED); idempotent | Narration Orchestrator, Inference Worker, Audit Service |
+| narration_job | Narration Orchestrator | orchestrator | Create on submission (QUEUED); progress through FR-022 states (QUEUED→PREPARING→RUNNING→POST_PROCESSING→COMPLETED, or FAILED/CANCELLED); idempotent | Narration Orchestrator, Inference Worker, Audit Service |
 | job_idempotency_state | Narration Orchestrator | orchestrator | Create with job; used for deduplication; expire after TTL | Narration Orchestrator exclusively |
 | quota_reservation | Usage & Policy Service | usage_policy | Create by Orchestrator (reserve call); update on completion (commit/release) | Usage & Policy, Narration Orchestrator |
 | generated_audio | Artifact Service (binary) | artifact | Create by Inference Worker via Artifact Service API; retain per approved policy; delete on expiry or user request | Artifact Service (binary); referenced by Narration Orchestrator |
@@ -99,9 +99,9 @@ Define which service owns each data entity, responsibility boundaries, and lifec
 - Job state is durable (survives service restarts)
 - Job cannot reference deleted or revoked profiles (validation on submission)
 - Job history is immutable for compliance
-- Quota reservation succeeds atomically before job SUBMITTED event published
-- On job completion/failure, reservation is committed/released atomically
-- Job cannot proceed to PROCESSING until profile enrollment complete (profile status = ENROLLED)
+- Quota reservation succeeds atomically before job QUEUED event published
+- On job completion/failure, usage is committed/released atomically via idempotent API call (before transitioning to COMPLETED)
+- Job cannot proceed to PREPARING until profile enrollment complete (profile status = ENROLLED)
 
 ---
 

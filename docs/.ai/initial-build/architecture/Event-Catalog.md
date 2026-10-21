@@ -44,7 +44,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 ```
 **Delivery Guarantee:** At-least-once (via transactional outbox)
 **Latency:** <5 seconds (background publisher)
-**Retention:** 2 years (compliance)
+**Retention:** Per approved retention policy
 
 #### user.deleted
 **Publisher:** Auth Service (via background outbox publisher, on user deletion)
@@ -68,7 +68,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 ```
 **Delivery Guarantee:** At-least-once
 **Latency:** <3 seconds
-**Retention:** 2 years (compliance)
+**Retention:** Per approved retention policy
 **Cascade Consumers:**
 - **Consent Service:** Soft-delete user's consent records per approved retention policy
 - **Voice Profile Service:** Revoke all user profiles (publishes voice_profile.revoked events)
@@ -192,7 +192,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 ```
 **Note:** Includes model_version (FR-012, AC-HIST-001); does NOT include speaker_embedding or model-specific data (AI Gateway owns)
 **Delivery Guarantee:** At-least-once
-**Retention:** 2 years
+**Retention:** Per approved retention policy
 
 #### voice_profile.enrollment_failed
 **Publisher:** Voice Profile Service (via background outbox publisher, after Worker reports hard quality failure or inference failure)
@@ -217,7 +217,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** At-least-once
-**Retention:** 2 years
+**Retention:** Per approved retention policy
 
 #### voice_profile.quality_warning (NEW, AC-ENR-001)
 **Publisher:** Voice Profile Service (via background outbox publisher, when Worker detects overrideable quality warnings)
@@ -249,7 +249,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 ```
 **Note:** Actionable findings for user notification; stored in Voice Profile Service for user review
 **Delivery Guarantee:** At-least-once
-**Retention:** 90 days
+**Retention:** Per approved retention policy
 
 #### voice_profile.revoked
 **Publisher:** Voice Profile Service (via background outbox publisher)
@@ -276,7 +276,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 **Note:** Includes sample_artifact_ids for Artifact Service cleanup; does not include generated-audio artifact IDs (Orchestrator coordinates that separately per AC-RET-001)
 **Delivery Guarantee:** At-least-once (must reach all subscribers)
 **Latency:** <3 seconds
-**Retention:** 2 years
+**Retention:** Per approved retention policy
 **Critical:** Triggers cascades; each subscriber is idempotent; revocation overrides all retention policies
 
 ---
@@ -428,7 +428,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** At-least-once
-**Retention:** 30 days (then archived)
+**Retention:** 30 days (then archived per approved retention policy)
 **Critical:** Triggers reservation release in Usage & Policy
 
 #### narration_job.cancelled
@@ -510,7 +510,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** Best-effort (high-volume; may be dropped)
-**Retention:** 90 days
+**Retention:** Per approved retention policy
 
 #### artifact.deleted
 **Publisher:** Artifact Service (via background outbox publisher, on deletion)
@@ -535,7 +535,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** At-least-once
-**Retention:** 1 year (delete audit trail)
+**Retention:** Per approved retention policy
 
 ---
 
@@ -565,7 +565,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** At-least-once
-**Retention:** 1 year
+**Retention:** Per approved retention policy
 
 #### budget.exceeded
 **Publisher:** Usage & Policy Service (via background outbox publisher)
@@ -590,7 +590,7 @@ Define all domain events and work commands, their publishers, subscribers, paylo
 }
 ```
 **Delivery Guarantee:** At-least-once
-**Retention:** 1 year
+**Retention:** Per approved retention policy
 
 #### usage.recorded
 **Publisher:** Usage & Policy Service (via background outbox publisher, after job completion)
@@ -633,21 +633,20 @@ For events with same `resource_id`, message broker enforces ordering:
 
 ```
 resource_id: prof_1
-  voice_profile.enrollment_requested → voice_profile.enrolled (or enrollment_failed)
+  voice_profile.enroll (work command published)
+  voice_profile.enrolled / voice_profile.enrollment_failed / voice_profile.quality_warning (domain events)
   voice_profile.revoked (terminal)
 ```
 
-### Per-User Ordering (Session Consistency)
-For events with same `actor_id` (user), attempt ordering (best-effort):
+### Per-Job Ordering (Causal Consistency)
+For narration jobs:
 
 ```
-actor_id: usr_123
-  user.verified
-  consent.recorded
-  voice_profile.enrollment_requested
-  voice_profile.enrolled
-  narration_job.submitted
-  narration_job.completed
+resource_id: job_456
+  narration.generate (work command published)
+  narration_job.submitted (domain event)
+  narration_job.started
+  narration_job.completed / narration_job.failed / narration_job.cancelled (terminal)
 ```
 
 ### Cross-Service Dependencies

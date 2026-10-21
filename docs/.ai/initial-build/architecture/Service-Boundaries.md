@@ -53,8 +53,9 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 
 ### Voice Profile Service
 **Owns:**
-- voice_profiles (profile_id, user_id, voice_name, enrollment_status=PENDING|ENROLLING|ENROLLED|FAILED|REVOKED, created_at, updated_at)
-- profile_metadata (profile_id, consent_id, sample_artifact_ids[])
+- voice_profiles (profile_id, user_id, voice_name, enrollment_status=PENDING|QUALITY_CHECKING|AWAITING_USER_OVERRIDE|ENROLLING|ENROLLED|FAILED|REVOKED, created_at, updated_at)
+- profile_metadata (profile_id, consent_id, sample_artifact_ids[], approved_model_id, approved_model_version, enrollment_timestamp)
+- quality_findings (profile_id, assessment_timestamp, findings_detail, is_hard_failure, user_override_decision, override_timestamp)
 
 **References:**
 - user_id → Auth Service (to verify ownership)
@@ -79,10 +80,11 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 
 ### Narration Orchestrator Service
 **Owns:**
-- narration_jobs (job_id, user_id, profile_id, status, script_snapshot, language, generation_params, idempotency_key, created_at, updated_at)
+- narration_jobs (job_id, user_id, profile_id, status, script_snapshot, language, model_id, model_version, generation_params, idempotency_key, created_at, updated_at)
 - job_status_history (job_id, status, timestamp, details)
 - idempotency_state (idempotency_key, user_id, request_hash, response_snapshot, expires_at)
 - job_output (job_id, output_artifact_id, duration_seconds, estimated_cost_usd, actual_cost_usd)
+- error_details (job_id, error_code, error_message, actionable_remediation_hint, timestamp)
 
 **References:**
 - user_id → Auth Service (to verify identity)
@@ -99,10 +101,8 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 
 **Job State Transitions (FR-022):**
 - QUEUED (after quota reservation succeeds) → PREPARING → RUNNING → POST_PROCESSING → COMPLETED (terminal)
-- QUEUED / PREPARING / RUNNING / POST_PROCESSING → FAILED (terminal, on Inference Worker failure)
-- QUEUED / PREPARING / RUNNING / POST_PROCESSING → CANCELLED (terminal, on user cancel or profile revoked)
-- QUEUED / PREPARING / RUNNING / POST_PROCESSING → FAILED (terminal, on Inference Worker failure)
-- QUEUED / PREPARING / RUNNING / POST_PROCESSING → CANCELLED (terminal, on user cancel or profile revoked)
+- From any non-terminal state → FAILED (terminal, on Inference Worker failure)
+- From any non-terminal state → CANCELLED (terminal, on user cancel or profile revoked)
 
 ---
 
@@ -211,9 +211,9 @@ Define exact boundaries, responsibilities, and interfaces for each Voice Narrati
 | Voice Profile Service | Yes | Yes (voice_profile.*) | Yes (consent.revoked) | Yes |
 | Narration Orchestrator | Yes | Yes (narration_job.*) | Yes (voice_profile.revoked) | Yes |
 | Artifact Service | Yes (limited) | Yes (artifact.*) | Yes (voice_profile.revoked) | Yes (download/preview only via signed URL) |
-| Usage & Policy Service | Yes (limited admin) | Yes (quota.*, budget.*, usage.*) | Yes (narration_job.completed) | Yes (read-only for authenticated user) |
+| Usage & Policy Service | Yes (limited admin) | Yes (quota.*, budget.*, usage.*) | Yes (user.deleted for cascade) | Yes (read-only for authenticated user) |
 | AI Gateway | No | No | Yes (voice_profile.revoked for cleanup) | **No (internal only)** |
-| Inference Worker | No | No | Yes (voice_profile.enrollment_requested, narration_job.submitted) | **No (internal only)** |
+| Inference Worker | No | No | Yes (voice_profile.enroll, narration.generate) | **No (internal only)** |
 | Audit Service | No (admin read API separate) | No | Yes (all domain events) | **No (admin API through API Gateway only)** |
 
 ## Data Isolation Rules
@@ -259,16 +259,15 @@ Every domain event includes:
 
 | Caller | Callee | When | Purpose |
 |--------|--------|------|---------|
-| All services | Auth Service | On every request | Verify bearer token, get user_id, role |
 | Voice Profile Service | Consent Service | On enrollment, on validation | Validate consent is active |
 | Voice Profile Service | Artifact Service | On profile creation | Reference sample artifact IDs |
-| Narration Orchestrator | Voice Profile Service | On job submission | Validate profile exists, owner, capability |
-| Narration Orchestrator | Usage & Policy Service | On job submission | Check quota before accepting job |
-| Inference Worker | Voice Profile Service | Before inference | Validate profile still active (not revoked) |
-| Inference Worker | AI Gateway | During inference | Get model, invoke inference |
-| Inference Worker | Narration Orchestrator | During job execution | Update job status, mark complete/failed |
-| Inference Worker | Artifact Service | After inference | Store generated audio, get artifact_id |
-| Artifact Service | Narration Orchestrator | On artifact deletion cascade | Notify that artifacts were deleted (via event) |
-| Usage & Policy Service | Narration Orchestrator | On policy queries | Retrieve job cost data |
+| Narration Orchestrator | Voice Profile Service | On job submission | Validate profile exists, owner, enrollment status |
+| Narration Orchestrator | AI Gateway | On job submission | Obtain cost estimate for model before quota reservation |
+| Narration Orchestrator | Usage & Policy Service | On job submission | Reserve quota (atomic); on completion: commit_usage (idempotent via reservation_id) |
+| Narration Orchestrator | Artifact Service | On profile revocation cascade | Request batch-delete of generated-audio artifacts |
+| Inference Worker | Voice Profile Service | Before/after enrollment | Validate profile still active; update enrollment status and quality findings |
+| Inference Worker | AI Gateway | During inference | Perform inference with speaker conditioning |
+| Inference Worker | Narration Orchestrator | During job execution | Get work details via GET /jobs/{job_id}/work-item; update status; report completion/failure |
+| Inference Worker | Artifact Service | After inference | Store generated audio; obtain artifact_id |
 
 ---

@@ -253,4 +253,82 @@ Terminal states: `FAILED`, `CANCELLED`
 | User data isolation enforced | Every operation validates user_id ownership; no cross-user data exposure |
 | Retention policies do not override revocation | Approved deletion/revocation requirements purge artifacts immediately, regardless of retention policy |
 
+## API Gateway Public and Internal Route Inventory
+
+### Public/Protected Routes (via API Gateway)
+The API Gateway routes legitimate external/user-initiated operations to:
+
+**Authentication:**
+- POST /auth/register
+- POST /auth/verify-email
+- POST /auth/login
+- GET /auth/me
+
+**Consent:**
+- POST /consent/record
+- GET /consent/{consent_id}
+- DELETE /consent/{consent_id} (user-initiated revocation)
+
+**Voice Profile:**
+- POST /voices (create profile)
+- GET /voices (list profiles)
+- GET /voices/{profile_id} (get profile status)
+- DELETE /voices/{profile_id} (user-initiated revocation)
+- PATCH /voices/{profile_id}/quality-override (user-initiated override of quality warning)
+
+**Narration Orchestrator:**
+- POST /jobs (submit narration job)
+- GET /jobs (list user's jobs)
+- GET /jobs/{job_id} (get job status)
+- POST /jobs/{job_id}/cancel (cancel job)
+
+**Artifact Service:**
+- GET /artifacts/{artifact_id}/download-url (signed URL for download)
+- GET /artifacts/{artifact_id}/preview-url (signed URL for preview)
+
+**Usage & Policy (limited access):**
+- GET /quotas/me (user's quota status)
+
+**Audit Service (admin-only):**
+- GET /admin/audit/events (query audit history)
+- GET /admin/audit/user/{user_id}/timeline
+- GET /admin/audit/job/{job_id}/history
+
+### Internal-Only Routes (No Public Access)
+The following services and operations are NOT accessible to public clients:
+
+**AI Gateway (internal-only):**
+- POST /ai/infer (inference endpoint, consumed by Inference Worker only)
+- GET /ai/models/approved (model catalog)
+- GET /ai/models/{model_id}/cost-estimate (cost estimation API)
+- GET /ai/models/{model_id}/validate-capability (capability validation)
+- PATCH /ai/speaker/{profile_id}/purge (model-conditioning purge on revocation)
+
+**Inference Worker (internal-only):**
+- No public HTTP API; async worker only
+- Consumes work commands from message broker
+- Calls Narration Orchestrator, Voice Profile, AI Gateway, Artifact Service via internal APIs
+
+**Voice Profile Service (internal-only):**
+- PATCH /voices/{profile_id}/status (Inference Worker status reporting)
+- GET /voices/validate/{profile_id} (profile validation)
+
+**Narration Orchestrator (internal-only):**
+- GET /jobs/{job_id}/work-item (Inference Worker retrieves work details)
+- PATCH /jobs/{job_id}/status (Inference Worker status updates)
+- POST /jobs/{job_id}/complete (Inference Worker reports completion)
+- POST /jobs/{job_id}/fail (Inference Worker reports failure)
+
+**Artifact Service (internal-only):**
+- POST /artifacts/batch-delete (generated-audio purging on revocation)
+- GET /artifacts/{artifact_id}/metadata (artifact metadata lookup)
+
+**Usage & Policy (internal-only):**
+- POST /quotas/reserve (quota reservation, called by Orchestrator)
+- POST /quotas/commit-usage (usage commitment, called by Orchestrator)
+- POST /quotas/release-reservation (reservation release on failure)
+
+**Audit Ingestion (internal-only):**
+- No inbound HTTP API; event-driven only via message broker
+
 ---

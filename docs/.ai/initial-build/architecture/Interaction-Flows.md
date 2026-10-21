@@ -334,7 +334,7 @@ Inference Worker
 - AI Gateway owns: model-specific speaker conditioning
 
 **Asynchronous Path:**
-- voice_profile.enrollment_requested (WORK COMMAND to Inference Worker)
+- voice_profile.enroll (WORK COMMAND to Inference Worker)
 - voice_profile.enrolled OR voice_profile.enrollment_failed (DOMAIN EVENTS)
 
 ---
