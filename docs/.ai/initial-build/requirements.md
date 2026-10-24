@@ -14,6 +14,9 @@ Deliver the initial product-focused requirements for Voice Narration Studio (M0 
 Approved by avinash2196 on 2026-10-19. This artifact does not authorize any Plan, contract, Implementation Plan, test, code change, or cloud provisioning.
 
 ## Relationship to Product-Level Requirements
+
+### Scope clarification — 2026-10-24
+The user confirmed that initial-build retains all non-conflicting P0 requirements from voice_narration_PDD_requirements.md, including neutral narration style, text-to-audio chunk mapping, and section regeneration when supported. The baseline's P0 requirements must not be treated as excluded merely because they are not individually enumerated below. The approved multi-user clarification Q2 and expressive-control clarification Q3 take precedence over conflicting older product assumptions. This records the user's scope clarification; resulting acceptance-criteria and Plan ownership revisions require review before execution. [User: scope clarification, 2026-10-24]
 This work-item revises the product scope to a general-purpose, multi-user narration platform while preserving the product-level baseline in voice_narration_PDD_requirements.md as the primary source for functional and nonfunctional expectations. Any change to approved product-level statements will be recorded and confirmed explicitly. [Repo: C:\Users\avina\Downloads\avinash-repo\v11\Voice-Narration\voice_narration_PDD_requirements.md:1-400; User: Q2]
 
 ## Repository-Confirmed Facts
@@ -119,7 +122,27 @@ Explicit Exclusions
 | 3 | Should basic expressive narration controls (pause strength, speech pace) be included in MVP (P0) or kept as P1? | P0 — Basic expressive controls included in MVP, subject to model feasibility and validation; advanced emotion controls remain P1. [User: Q3] |
 | 4 | Confirm the 3000s (50-minute) maximum: should it be a hard system limit, or subordinate to per-user quotas and budget enforcement? | subordinate_to_quotas — 3000s is the absolute system maximum but requests must also satisfy per-user quotas, resource limits, and operational budget constraints. [User: Q4] |
 
-## Provenance Check
+## Contract Clarifications Approved on 2026-10-24
+
+The following decisions were proposed together by the orchestrator and explicitly approved by the user. They resolve contract details; they do not approve an unwritten/revised contract or authorize implementation.
+
+| Question | Approved answer | Source |
+|---|---|---|
+| Q5 — Enrollment and public routes | Record consent first, validate active owner authorization before sample persistence, upload authorized samples and return artifact references, then create a voice profile from consent/sample references. Enrollment is asynchronous with profile status and informed quality-override operations. Use artifact-based preview/download links and /quotas/me. Service callbacks remain internal. | User: yes to the three proposed contract decisions, 2026-10-24 |
+| Q6 — Safe generation retries | Require Idempotency-Key for generation, scoped to authenticated owner and operation. Compare parsed effective input; identical concurrent submissions create one job and return the original acceptance result; changed input returns 409. Replay survives restart without duplicate execution or charges. Retain a minimal key/fingerprint/job-reference record for the account lifetime, including after audio deletion. This is not permission to retain private scripts or deleted audio in the retry record. | User: yes to the three proposed contract decisions, 2026-10-24 |
+| Q7 — Failure mapping | 400 invalid input or missing required key; 401 missing/invalid authentication; 403 permission denial; 404 missing resources; 409 conflicts including changed input for a key or invalid lifecycle transition; 429 rate/quota/concurrency exhaustion; 503 operator budget/kill-switch stops or unavailable dependencies. Distinguish failures with stable error codes in a common error body; human-readable messages are informative. | User: yes to the three proposed contract decisions, 2026-10-24 |
+
+## Additional Contract Clarifications Approved on 2026-10-24
+
+| Question | Approved answer | Source |
+|---|---|---|
+| Q8 — Validation and limits | Reject unknown fields, wrong types, and missing/null/blank required values with 400. Require administrator-configured upload, script, rate, concurrency, timeout, retry and spend limits. Model-dependent limits come from approved feasibility results; unconfigured generation stays disabled. Use cursor pagination, newest first; exact filters; USD decimal strings with six decimal places and half-even rounding. | User: approved Q8–Q10, 2026-10-24 |
+| Q9 — Jobs and deletion | Regeneration creates a new job preserving the original; supported section regeneration uses chunk IDs and provides a joined preview. Cancellation is allowed for any unfinished job; completion and cancellation have one durable winner. Revocation immediately blocks synthesis and retrieval. Deletion returns 202 with cleanup status and follows the approved purge window. Signed audio links still require owner authorization when accessed. | User: approved Q8–Q10, 2026-10-24 |
+| Q10 — Accounts and access | Public registration creates Users only; Administrators are provisioned separately. Token and link lifetimes are explicitly configured. Administrator access to private content requires an owner grant with scope and expiry. Deployed transport is encrypted; HTTP is allowed only on loopback for local development. | User: approved Q8–Q10, 2026-10-24 |
+
+The user also authorized the planner to define concrete schemas and configuration names within the approved rules. This delegates technical drafting decisions within the confirmed scope, not new product behavior, contract approval, or implementation approval. The completed contract must return for human review.
+
+## Provenance Check (Original Capture)
 - Every requirement and operational answer above carries a source label (User Q1/Q2 or Repo citations).
 - `Derived` items: acceptance criteria are derived from tracked FR/NFR/R- items above and therefore trace to those items.
 - `Left to` items: model selection and license approval (Gate G1) are left to M1; exact retention durations for profiles and consent/audit records left to admin-configured policy in M2.

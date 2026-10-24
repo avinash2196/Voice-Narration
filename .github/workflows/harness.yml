@@ -1,0 +1,37 @@
+name: Developer prerequisites
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13.17'
+      - name: Install Python prerequisites
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pip check
+          python -m playwright install --with-deps chromium
+      - name: Install selected Compose version in isolated CLI configuration
+        run: |
+          mkdir -p "$RUNNER_TEMP/vn-docker/cli-plugins"
+          cd "$RUNNER_TEMP/vn-docker/cli-plugins"
+          curl -fsSLO https://github.com/docker/compose/releases/download/v5.6.0/docker-compose-linux-x86_64
+          curl -fsSLO https://github.com/docker/compose/releases/download/v5.6.0/docker-compose-linux-x86_64.sha256
+          sha256sum -c docker-compose-linux-x86_64.sha256
+          mv docker-compose-linux-x86_64 docker-compose
+          chmod +x docker-compose
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/vn-docker" >> "$GITHUB_ENV"
+      - name: Require selected Compose version
+        run: test "$(docker compose version --short | tr -d v)" = '5.6.0'
+      - name: Verify dependency image
+        run: |
+          docker build -f containers/harness.Dockerfile -t vn-harness:foundation .
+          docker run --rm vn-harness:foundation
+      - name: Verify isolated prerequisites twice
+        run: python tools/readiness.py
+      - name: Record resolved dependency versions
+        run: python -m pip freeze
