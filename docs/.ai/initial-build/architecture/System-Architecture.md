@@ -2,6 +2,10 @@
 
 ## Overview
 
+### Deployment-shape decision — 2026-10-24
+
+The user selected option 2: retain the nine separate services described below, rather than consolidating them into a modular API plus worker. This explicit decision resolves the deployment-shape question raised in ../Contract-Review.md and takes precedence over the product baseline's default preference for a modular API. It approves this architecture choice only; the complete architecture and revised API contract still require review. The $20/month operational target, Windows/local development, model/licensing gates, and prohibition on unapproved cloud provisioning remain in effect. Deployment costs and operational feasibility have not been demonstrated.
+
 Voice Narration Studio M0 uses an **event-driven, service-oriented distributed architecture** with explicit service ownership boundaries. Each service owns its data, business logic, and lifecycle. Services communicate via synchronous APIs (when immediate decisions are required) and asynchronous domain events (for eventual consistency and lifecycle propagation).
 
 This architecture supports:
