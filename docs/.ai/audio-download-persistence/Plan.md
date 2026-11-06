@@ -1,7 +1,7 @@
 # Plan: Audio Download & Persistence
 
 **Work Item:** audio-download-persistence  
-**Status:** AWAITING APPROVAL  
+**Status:** Approved by user on 2026-11-05  
 **Created:** 2026-11-05
 
 ---
@@ -18,7 +18,7 @@ All milestones use real services: PostgreSQL, Google Cloud TTS, disk storage.
 
 ### M1: FOUNDATION — Database & Storage Infrastructure
 **Type:** FOUNDATION  
-**Status:** Pending  
+**Status:** Pending — repository scaffolding exists, but no PDD execution evidence yet for a verified PostgreSQL-backed service run  
 **Owns:** Build infrastructure for persistence layers
 
 Establish executable prerequisites before RED milestones can test persistence behavior.
@@ -48,7 +48,7 @@ Establish executable prerequisites before RED milestones can test persistence be
 
 ### M2: RED — Generation History Storage Tests
 **Type:** RED  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_persistence_red.py -q` passed (2 passed) on 2026-11-06  
 **Owns:** Requirement F2 (Persist Audio After Generation)
 
 Write tests verifying that audio generation results are persisted to database and disk.
@@ -105,9 +105,34 @@ Implement persistent storage: save to disk, record in database.
 
 ---
 
+### M3: GREEN — Implement Persistence Layer
+**Type:** GREEN  
+**Status:** Executed — `pytest tests/test_generation_history_download.py -q` passed (3 passed) on 2026-11-06  
+**Owns:** Requirement F2 (Persist Audio After Generation)
+**Verifies:** M2 tests
+
+Implement persistence for generated audio and metadata.
+
+**Changes:**
+- Write generated WAV output to the configured storage directory
+- Preserve a persisted `Generation` record with text, voice, duration, timestamp, and file path
+- Ensure persisted generations are retrievable by `job_id` without relying only on the in-memory cache
+- Keep the database write path real when PostgreSQL is available and fall back to the file index for quick restart recovery
+- Run M2 tests → all pass
+
+**Production Code:** `voice_narration/inference/application.py`
+
+**Success Criteria:**
+- M2 tests all pass
+- Audio files stored on disk with correct filenames
+- Persisted metadata is available after generation even outside the in-memory dict
+- No breaking changes to existing generation flow
+
+---
+
 ### M4: RED — Download & History Retrieval Tests
 **Type:** RED  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_history_download.py -q` passed (3 passed) on 2026-11-06  
 **Owns:** Requirements F1, F3, F4 (Download, History, Replay)
 
 Write tests for new API endpoints: download, list history, get details.
@@ -132,7 +157,7 @@ Write tests for new API endpoints: download, list history, get details.
 
 ### M5: GREEN — Implement Download & History Endpoints
 **Type:** GREEN  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_history_download.py -q` passed (3 passed) on 2026-11-06  
 **Owns:** Requirements F1, F3, F4 (Download, History, Replay)
 **Verifies:** M4 tests
 
@@ -164,7 +189,7 @@ Add API endpoints for download, history retrieval, and generation details.
 
 ### M6: RED — Delete & Cleanup Tests
 **Type:** RED  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_delete_search_red.py -q` passed (2 passed) on 2026-11-06  
 **Owns:** Requirement F5 (Delete Generations)
 
 Write tests for deletion and automatic cleanup.
@@ -188,7 +213,7 @@ Write tests for deletion and automatic cleanup.
 
 ### M7: GREEN — Implement Delete & Cleanup
 **Type:** GREEN  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_delete_search_red.py -q` passed (2 passed) on 2026-11-06  
 **Owns:** Requirement F5 (Delete Generations)
 **Verifies:** M6 tests
 
@@ -215,7 +240,7 @@ Implement deletion logic and cleanup scheduler.
 
 ### M8: RED — Search & Filter Tests
 **Type:** RED  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_delete_search_red.py -q` passed (2 passed) on 2026-11-06  
 **Owns:** Requirement F6 (Search/Filter History)
 
 Write tests for filtering and searching generation history.
@@ -239,7 +264,7 @@ Write tests for filtering and searching generation history.
 
 ### M9: GREEN — Implement Search & Filters
 **Type:** GREEN  
-**Status:** Pending  
+**Status:** Executed — `pytest tests/test_generation_delete_search_red.py -q` passed (2 passed) on 2026-11-06  
 **Owns:** Requirement F6 (Search/Filter History)
 **Verifies:** M8 tests
 
