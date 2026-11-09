@@ -8,15 +8,21 @@ Approval history: the previous Plan was approved by avinash2196 on 2026-10-19T11
 
 Revision basis: requirements.md Status records approval by avinash2196 on 2026-10-19 and its Scope clarification dated 2026-10-24 records the user's retention of all non-conflicting baseline P0 requirements. The deployment-shape decision dated 2026-10-24 in architecture/System-Architecture.md records nine separate services. Contract-Review.md remains changes-requested; the draft contract and remaining architecture details are not approved.
 
+Execution reconciliation update (2026-11-08): repository implementation has proceeded in two practical passes outside the approved milestone-by-milestone PDD execution record: (1) initial runnable build/harness and (2) AI integration for voice enrollment plus Google TTS generation. This Plan update records that drift explicitly so next work can proceed from accurate state.
+
 ## Objective
 
 Deliver the multi-user Hindi-first narration product, with English support, reusable consented voices, durable asynchronous generation, safe expressive controls and private audio lifecycle. Retain every non-conflicting baseline P0 requirement, including neutral style, model-minimal enrollment artifacts, seamless audio/chunk mapping and conditional section regeneration.
 
 ## Current State
 
-Repository inspection on 2026-10-24 found README.md, voice_narration_PDD_requirements.md and work-item documentation only: no production source, tests, dependency/build definitions, containers or runnable verification scripts. README.md contains only the repository title. No existing production behavior or tests can serve as a passing baseline.
+Repository inspection on 2026-11-08 finds runnable source and tests, not documentation-only state. The repo now contains FastAPI services (`voice_narration/simple_voices/application.py`, `voice_narration/inference/application.py`), provider implementations including Google TTS (`voice_narration/inference/providers/google.py`), a React UI (`frontend/src/App.jsx`) and test coverage (`tests/test_clone_flow.py`) with local dependency/bootstrap files (`requirements-dev.txt`, `pytest.ini`).
 
-The existing Plan's nineteen milestones are all Pending. Its draft contract is pending approval and Contract-Review.md lists unresolved contract decisions. The selected nine-service deployment shape is recorded; deployment costs, runtime feasibility, model selection and full architecture approval have not been demonstrated. No Implementation Plan exists.
+Two implementation passes are evident from code and behavior:
+1. Initial build pass: local service/UI skeleton and basic workflow wiring.
+2. AI integration pass: persisted voice profiles/jobs, generated WAV artifact handling and Google Cloud TTS-backed generation.
+
+This implementation drifted ahead of the approved per-milestone execution record. The authoritative contract remains approved, but downstream milestone status now requires explicit reconciliation/replanning rather than treating all executable milestones as untouched.
 
 ## In Scope
 
@@ -424,30 +430,37 @@ Each subsequent Implementation Plan carries forward the actual predecessor comma
 | Milestone | Status | Evidence / Notes |
 | --- | --- | --- |
 | API & External Contract | Complete | contract/API-Contract.md Contract Review Status: Approved by avinash2196 on 2026-10-24. Q5–Q10 resolved in requirements.md; eleven contract-completeness checks and documentation diff checks recorded. Human approval, not runtime verification, completes this CONTRACT milestone. |
-| Developer & Test Harness | Pending | CONTRACT predecessor complete. 001_Implementation_Plan_Foundation.md prepared by a fresh planner; Awaiting human approval. Documentation checks passed; runtime dry run not performed because the required Python runtime and Docker server are unavailable. No executable files created. |
-| Model Feasibility & Licensing Assessment | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Persistence & Storage RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Persistence & Storage GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Authentication & Consent RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Authentication & Consent GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Voice Enrollment RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Voice Enrollment GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Job Orchestration & Idempotency RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Job Orchestration & Idempotency GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Mock Inference Adapter RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Mock Inference Adapter GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
+| Developer & Test Harness | Complete | Retroactive reconciliation from repository evidence: executable service entrypoints, dependency/bootstrap files and runnable tests exist (`requirements-dev.txt`, `voice_narration/*/__main__.py`, `frontend/src/App.jsx`, `tests/test_clone_flow.py`, `pytest.ini`). Verification command `pytest -q tests\test_clone_flow.py` passed (2 passed) on 2026-11-08. |
+| Model Feasibility & Licensing Assessment | Pending | No approved model-eval artifact set (`candidates.md`, `license-matrix.md`, `evaluation-protocol.md`, `approved.md`) is recorded yet. |
+| Persistence & Storage RED | Blocked — drift reconciliation required | Pass-2 implementation already introduced persistence behavior (SQLite job/profile stores and file persistence) before recorded RED evidence; requires Plan/Implementation-Plan reconciliation before further milestone claims. |
+| Persistence & Storage GREEN | Blocked — drift reconciliation required | Behavior exists in prototype form; reconcile against approved acceptance criteria and missing RED evidence before completion can be claimed. |
+| Authentication & Consent RED | Blocked — drift reconciliation required | Current code contains consent fields and user IDs but not full approved authentication/verification model; out-of-sequence implementation requires replanning. |
+| Authentication & Consent GREEN | Blocked — drift reconciliation required | Partial implementation present without approved RED/GREEN execution evidence chain. |
+| Voice Enrollment RED | Blocked — drift reconciliation required | Enrollment endpoint/UI/tests already exist; RED evidence history not captured in current record. |
+| Voice Enrollment GREEN | Blocked — drift reconciliation required | Enrollment and reuse behavior exists in prototype form; requires reconciliation to approved scope and evidence gates. |
+| Job Orchestration & Idempotency RED | Blocked — drift reconciliation required | Job creation/listing/persistence behavior exists; RED evidence and full idempotency criteria trace are missing in the execution record. |
+| Job Orchestration & Idempotency GREEN | Blocked — drift reconciliation required | Prototype behavior present without approved milestone-sequence evidence. |
+| Mock Inference Adapter RED | Blocked — drift reconciliation required | Provider layering exists, but current runtime path uses real Google provider; required RED evidence chain not recorded. |
+| Mock Inference Adapter GREEN | Blocked — drift reconciliation required | Partial adapter structure exists; contract-level scope and evidence need formal reconciliation. |
 | Approved Model Test Prerequisites | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Real-Model Inference Integration RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Real-Model Inference Integration GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Security & Nine-Service Integration RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Security & Nine-Service Integration GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Frontend & UX RED | Pending | Requires completed predecessors and its own approved Implementation Plan. |
-| Frontend & UX GREEN | Pending | Requires completed predecessors and its own approved Implementation Plan. |
+| Real-Model Inference Integration RED | Blocked — drift reconciliation required | Google TTS-backed generation path is implemented in pass-2 code without recorded RED milestone evidence. |
+| Real-Model Inference Integration GREEN | Blocked — drift reconciliation required | Real-provider integration exists in prototype behavior; needs reconciliation to approved evaluation/licensing gates. |
+| Security & Nine-Service Integration RED | Pending | No nine-service deployed integration evidence is recorded; this remains future planned work. |
+| Security & Nine-Service Integration GREEN | Pending | Requires completed predecessors, supplied deployment evidence and its own approved Implementation Plan. |
+| Frontend & UX RED | Blocked — drift reconciliation required | UI flow for enrollment/generation/download already exists; RED evidence chain is not captured in the milestone record. |
+| Frontend & UX GREEN | Blocked — drift reconciliation required | Prototype UX behavior exists; completion against full approved criteria remains unverified in PDD sequence. |
 | Documentation & Operator Controls | Pending | Requires completed predecessors and its own approved Implementation Plan. |
 | Cloud Run L4 Deployment Validation | Pending | Requires completed predecessors and its own approved Implementation Plan. |
 | End-to-End Verification | Pending | Requires completed predecessors and its own approved Implementation Plan. |
 
-No executable milestone has run. CONTRACT is complete through the approved deliverable above; all executable milestones remain Pending. No execution evidence was removed.
+Execution reality now records two implemented passes (initial build, then AI integration). CONTRACT and FOUNDATION are recorded complete; multiple downstream milestones are marked Blocked for explicit drift reconciliation before additional completion claims.
+
+Drift evidence snapshot (2026-11-08):
+- Voice service and enrollment behavior implemented: `voice_narration/simple_voices/application.py` (`/voices` list/create/approve/revoke).
+- Inference generation and downloadable WAV behavior implemented: `voice_narration/inference/application.py` (`/inference/jobs`, `/inference/jobs/{job_id}/audio`).
+- Real provider integration present: `voice_narration/inference/providers/google.py` and provider import wiring in `voice_narration/inference/providers/__init__.py`.
+- Browser flow implemented: `frontend/src/App.jsx` (voice enrollment, generation, playback/download).
+- Regression command executed: `pytest -q tests\test_clone_flow.py` → `2 passed in 3.06s`.
 
 ## Risks
 
@@ -498,7 +511,7 @@ The original nineteen-milestone decomposition is retained where sound; enrollmen
 7. Fields: every entry has capability, rationale, type, one predecessor, scope, owned concerns, exclusions and success criteria; every OTHER also has baseline, no-behavior-change statement, preserved checks and completion evidence.
 8. Ownership: atomic requirement rows have one delivery owner and one matching RED; contract, prerequisite and evidence concerns are distinct. Scope quotations provide evidence; final tests do not acquire duplicate ownership.
 9. Scope: restored all baseline P0 IDs, applied Q2/Q3 conflicts, retained proposed-target calibration, and linked risks to inspected artifacts.
-10. Status: original executed count was zero; all revised rows remain Pending and revision awaits human review.
+10. Status: execution is no longer all-pending; CONTRACT plus FOUNDATION are recorded complete, while drifted downstream implementation is now marked Blocked or Pending until reconciliation/replanning.
 11. Prerequisites: initial FOUNDATION serves all REDs; selected-model FOUNDATION supplements later real-model/integration/browser checks after selection. Missing production symbols are RED evidence, not scaffolding work.
 12. Criteria/artifacts: all ten work-item acceptance criteria and retained P0/Plan success criteria appear above with scope evidence. Verification uses only scoped predecessor checks, evaluation artifacts, supplied deployment evidence and the owned report. Local security checks cannot close deployed acceptance.
 13. Commands: no repository-supported commands exist; FOUNDATION must establish exact commands through reviewed Implementation Plans. Unsupported previous sample commands/scripts are removed.

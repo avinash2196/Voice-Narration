@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: voice-narration-inference
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      containerConcurrency: 10
+      timeoutSeconds: 300
+      containers:
+        - image: us-docker.pkg.dev/PROJECT_ID/voice-narration/inference:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: INFERENCE_BASE_URL
+              value: https://voice-narration-inference-REPLACE_URL
+            - name: VOICE_CLONING_API_BASE_URL
+              value: https://chatterbox-model-api-REPLACE_URL

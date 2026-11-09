@@ -5,3 +5,21 @@
 /.env
 __pycache__/
 *.pyc
+
+# Secrets and credentials
+service-account-key.json
+*-key.json
+.env.*
+!.env.example
+
+# Local runtime data (databases, uploaded voices, generated audio)
+/audio_storage/
+
+# Archives and logs
+*.zip
+*.log
+
+# Frontend build/dev output
+node_modules/
+/frontend/.vite/
+/frontend/dist/
