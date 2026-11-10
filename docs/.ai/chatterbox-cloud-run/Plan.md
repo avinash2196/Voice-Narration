@@ -233,7 +233,7 @@ Prerequisite coverage (Plan Content Rule 11):
 | --- | --- | --- |
 | CRM-1 — Chatterbox Cloud Run Contract (CONTRACT) | Complete | `API-Contract.md` Contract Review Status: Approved by avinash2196 on 2026-11-09 (CCD-1–CCD-7 accepted). Human approval, not runtime verification, completes this CONTRACT milestone. |
 | CRM-2 — Chatterbox Service RED (RED) | Complete | RED established on 2026-11-09 by `001_Implementation_Plan_Chatterbox_Service_RED.md` revision 2: C2-AC-1–C2-AC-5 met; 13 new tests fail on their own status assertions, 9 existing tests pass, in two consecutive full runs. See "CRM-2 Execution Evidence (revision 2)" below; the revision-1 stop is kept below for history. |
-| CRM-3 — Chatterbox Service GREEN (GREEN) | Pending | |
+| CRM-3 — Chatterbox Service GREEN (GREEN) | Complete | GREEN verified on 2026-11-09 by `002_Implementation_Plan_Chatterbox_Service_GREEN.md`: C3-AC-1–C3-AC-4 met; `application.py` matches the planned content (SHA-256 `10cc955b…c54a`); 22 of 22 tests pass in two consecutive full runs; the 13 CRM-2 tests pass on their own. See "CRM-3 Execution Evidence" below. |
 | CRM-4 — Inference Client RED (RED) | Pending | |
 | CRM-5 — Inference Client GREEN (GREEN) | Pending | |
 | CRM-6 — Chatterbox Cloud Run Deployment Document (OTHER) | Pending | |
@@ -282,6 +282,32 @@ Executed on 2026-11-09 at commit `360846e` from `001_Implementation_Plan_Chatter
 Result: C2-AC-1 (file exact, no other change), C2-AC-2 (22 collected, no collection/import/fixture error), C2-AC-3 (each new test fails with its own status `AssertionError`; no transport error), C2-AC-4 (the 9 pre-existing tests pass) and C2-AC-5 (V2 repeats V1) are met. The failures show the missing multipart request handling, `sample_path` rejection, empty-sample answer, retention and one-at-a-time serving: the unmodified route still expects a JSON body. New tests passing at RED: none, matching the plan's "Preserved-behavior tests (expected to pass at RED): none".
 
 Deviations: one extra read-only command, `.\.venv\Scripts\python.exe -m pytest tests -q --co`, was run after V3 to list the 9 pre-existing test IDs; it changes nothing. Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started; each exited, and C2-T13's `uvicorn` server stopped in its own `finally`. Scratch files (extracted code block, run logs) are in the session scratchpad only. CRM-3 (GREEN) is not started and needs its own approved Implementation Plan.
+
+### CRM-3 Execution Evidence
+
+Executed on 2026-11-09 at commit `ac27993` from `002_Implementation_Plan_Chatterbox_Service_GREEN.md` (Human Review: approved by avinash2196 on 2026-11-09, "Approve and run").
+
+- Step 2 `git status --short`: only `?? docs/.ai/chatterbox-cloud-run/002_Implementation_Plan_Chatterbox_Service_GREEN.md`. `git diff --quiet HEAD -- voice_narration/chatterbox_api/application.py`: exit `0`.
+- Step 3 `sha256sum tests/test_chatterbox_service_red.py`: `2ce5b014e87791b329c2222ef9f1fb923a9524489db18a724129a8d1fff156d4` (matches).
+- Step 4: the plan's complete final content (plan lines 310–454) was extracted with LF endings and written over `voice_narration/chatterbox_api/application.py`. `sha256sum`: `10cc955bcbb54745878eacb8aa5cfd52ea90250f960f7a3834f234d9d2acc54a`, 145 lines (matches). `git diff` printed the expected `LF will be replaced by CRLF` warning. Its hunks have the same ranges as the plan (`@@ -2,13 +2,18 @@`, `@@ -18,19 +23,18 @@`, `@@ -40,6 +44,36 @@`, `@@ -51,39 +85,54 @@`), but Git adds function-name context to the hunk headers and aligns some lines inside the last hunk differently. The same comparison done the plan's way, `diff -u` from the committed file to the new file, matched the plan's unified diff exactly (`diff` printed nothing). Applying the plan's diff with `patch -p1` to the committed file gave SHA-256 `10cc955b…c54a`.
+- C3-V1 `.\.venv\Scripts\python.exe -m pytest tests -ra` (exit 0):
+  ```
+  collected 22 items
+  tests\test_ai_gateway_red.py .....
+  tests\test_ai_gateway_telemetry_red.py .
+  tests\test_chatterbox_service_red.py .............
+  tests\test_clone_flow.py ...
+  ======================== 22 passed, 1 warning in 5.04s ========================
+  ```
+  The one warning is the existing `StarletteDeprecationWarning` from `fastapi/testclient.py`.
+- C3-V2 (repeat, no cleaning, exit 0): `collected 22 items`, `22 passed, 1 warning in 5.17s`; no `FAILED` or `ERROR` line.
+- C3-V3 `.\.venv\Scripts\python.exe -m pytest tests/test_chatterbox_service_red.py -q` (exit 0): `13 passed, 1 warning in 2.74s`.
+- C3-V4 `git status --short`: ` M voice_narration/chatterbox_api/application.py`, `?? docs/.ai/chatterbox-cloud-run/002_Implementation_Plan_Chatterbox_Service_GREEN.md` (this checked state is before the status update).
+- C3-V5 `git diff --stat`: `voice_narration/chatterbox_api/application.py | 123 ++++++++++++++++++--------`, `1 file changed, 86 insertions(+), 37 deletions(-)`. `git diff -- voice_narration/chatterbox_api/application.py` was byte-identical to the step-4 diff. No `+` or `-` line falls inside `health` or `metadata`; `def health` appears only as the hunk-header context and as an unchanged context line.
+
+Result: C3-AC-1 (exact content; the RED test hash is unchanged; no other file changed), C3-AC-2 (22 collected and 22 passed: C2-T1–C2-T13 plus the 9 pre-existing tests), C3-AC-3 (the second run repeats the first) and C3-AC-4 (only `application.py` changed; `health` and `metadata` unchanged) are met. The 13 CRM-2 tests that failed at RED now pass, and the 9 pre-existing tests still pass. Known pre-existing failures: none named; none occurred.
+
+Deviations: two read-only checks were added at step 4 because `git diff` lays out the hunks differently from the plan's `diff -u` output: a `diff -u` comparison and a `patch -p1` apply, both run in the session scratchpad. They change nothing in the repository. The commands planned for C3-V1–C3-V5 ran as planned, in the planned order. Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started; each exited, and C2-T13's `uvicorn` server stopped in its own `finally`. Scratch files are in the session scratchpad only. CRM-4 (RED) is not started and needs its own approved Implementation Plan.
 
 ## Risks
 
