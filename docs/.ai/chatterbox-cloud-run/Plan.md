@@ -234,7 +234,7 @@ Prerequisite coverage (Plan Content Rule 11):
 | CRM-1 — Chatterbox Cloud Run Contract (CONTRACT) | Complete | `API-Contract.md` Contract Review Status: Approved by avinash2196 on 2026-11-09 (CCD-1–CCD-7 accepted). Human approval, not runtime verification, completes this CONTRACT milestone. |
 | CRM-2 — Chatterbox Service RED (RED) | Complete | RED established on 2026-11-09 by `001_Implementation_Plan_Chatterbox_Service_RED.md` revision 2: C2-AC-1–C2-AC-5 met; 13 new tests fail on their own status assertions, 9 existing tests pass, in two consecutive full runs. See "CRM-2 Execution Evidence (revision 2)" below; the revision-1 stop is kept below for history. |
 | CRM-3 — Chatterbox Service GREEN (GREEN) | Complete | GREEN verified on 2026-11-09 by `002_Implementation_Plan_Chatterbox_Service_GREEN.md`: C3-AC-1–C3-AC-4 met; `application.py` matches the planned content (SHA-256 `10cc955b…c54a`); 22 of 22 tests pass in two consecutive full runs; the 13 CRM-2 tests pass on their own. See "CRM-3 Execution Evidence" below. |
-| CRM-4 — Inference Client RED (RED) | Pending | |
+| CRM-4 — Inference Client RED (RED) | Complete | RED established on 2026-11-09 by `003_Implementation_Plan_Inference_Client_RED.md`: C4-AC-1–C4-AC-5 met; 4 files match the planned SHA-256; 71 collected, 51 fail on their own assertions (49 new cases, RF-14, RF-15), 20 pass, in two consecutive full runs. See "CRM-4 Execution Evidence" below. |
 | CRM-5 — Inference Client GREEN (GREEN) | Pending | |
 | CRM-6 — Chatterbox Cloud Run Deployment Document (OTHER) | Pending | |
 
@@ -308,6 +308,47 @@ Executed on 2026-11-09 at commit `ac27993` from `002_Implementation_Plan_Chatter
 Result: C3-AC-1 (exact content; the RED test hash is unchanged; no other file changed), C3-AC-2 (22 collected and 22 passed: C2-T1–C2-T13 plus the 9 pre-existing tests), C3-AC-3 (the second run repeats the first) and C3-AC-4 (only `application.py` changed; `health` and `metadata` unchanged) are met. The 13 CRM-2 tests that failed at RED now pass, and the 9 pre-existing tests still pass. Known pre-existing failures: none named; none occurred.
 
 Deviations: two read-only checks were added at step 4 because `git diff` lays out the hunks differently from the plan's `diff -u` output: a `diff -u` comparison and a `patch -p1` apply, both run in the session scratchpad. They change nothing in the repository. The commands planned for C3-V1–C3-V5 ran as planned, in the planned order. Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started; each exited, and C2-T13's `uvicorn` server stopped in its own `finally`. Scratch files are in the session scratchpad only. CRM-4 (RED) is not started and needs its own approved Implementation Plan.
+
+### CRM-4 Execution Evidence
+
+Executed on 2026-11-09 at commit `467b9f2` from `003_Implementation_Plan_Inference_Client_RED.md` (Human Review: approved by avinash2196 on 2026-11-09, "Approve plan").
+
+- Step 2 `git status --short`: only `?? docs/.ai/chatterbox-cloud-run/003_Implementation_Plan_Inference_Client_RED.md`. `git diff --quiet HEAD -- tests/test_clone_flow.py tests/test_ai_gateway_telemetry_red.py voice_narration/`: exit `0`. `tests/_chatterbox_boundary.py` and `tests/test_inference_client_red.py` did not exist.
+- Step 3: the plan's four complete-content blocks (plan lines 196–592, 598–1177, 1202–1289, 1380–1459) were extracted with LF endings and written to `tests/_chatterbox_boundary.py` (397 lines), `tests/test_inference_client_red.py` (580), `tests/test_clone_flow.py` (88) and `tests/test_ai_gateway_telemetry_red.py` (80).
+- Step 4 C4-V5 `sha256sum tests/_chatterbox_boundary.py tests/test_inference_client_red.py tests/test_clone_flow.py tests/test_ai_gateway_telemetry_red.py`:
+  ```
+  7ef1a7bd05e3a273faf76eebca9973984000ff1ad5f408e550784865ca710608 *tests/_chatterbox_boundary.py
+  fff78d051a09ec355ab465e8c2751b7c53d627d2b7d0139a8273c4691798314e *tests/test_inference_client_red.py
+  84416efa942f57fd1675d4955f8e7546e6ff3c782978ee15d248d6c85870edb8 *tests/test_clone_flow.py
+  ab285fd7f808bfa2358ef80c4ca6ba6e68afbbfc154d07c005f9d20455032f88 *tests/test_ai_gateway_telemetry_red.py
+  ```
+  All four match. `git diff -- tests/test_clone_flow.py tests/test_ai_gateway_telemetry_red.py` printed the expected `LF will be replaced by CRLF` warnings and only the changed lines of the plan's two diffs (Git adds function-name context to hunk headers). `diff -u` from `git show HEAD:<file>` to each new file, compared with the plan's diff blocks (plan lines 1185–1196, 1297–1374): identical.
+- C4-V1 `.\.venv\Scripts\python.exe -m pytest tests -ra` (exit 1):
+  ```
+  collected 71 items
+  tests\test_ai_gateway_red.py .....
+  tests\test_ai_gateway_telemetry_red.py F
+  tests\test_chatterbox_service_red.py .............
+  tests\test_clone_flow.py ..F
+  tests\test_inference_client_red.py FFFF... (49 F)
+  FAILED ... (51 lines: the 49 cases of tests/test_inference_client_red.py, RF-14, RF-15)
+  ============= 51 failed, 20 passed, 1 warning in 61.79s (0:01:01) =============
+  ```
+  No `ERROR` line. The one warning is the existing `StarletteDeprecationWarning`. Count of `did not start`, `network access was attempted`, `ModuleNotFoundError`, `ImportError`, `TransportError`, `ReadError`, `ConnectError`, `RemoteProtocolError`, `fixture … not found`, `Traceback`: `0`.
+- C4-V2 (repeat, no cleaning, exit 1): `collected 71 items`, `51 failed, 20 passed, 1 warning in 56.62s`; no `ERROR` line; `FAILED` lines identical to C4-V1 (`diff` printed nothing); error-text count `0`.
+- C4-V3 `.\.venv\Scripts\python.exe -m pytest tests/test_inference_client_red.py tests/test_clone_flow.py::test_voice_cloning_returns_guidance_when_clone_backend_unavailable tests/test_ai_gateway_telemetry_red.py -q --tb=line` (exit 1): `51 failed, 1 warning in 44.39s`. First failing location per test, counted:
+  ```
+  42 test_inference_client_red.py:156: AssertionError   (assert_cloning_failed body: generic "Voice cloning service is unavailable. ..." != contract CFR message)
+   7 test_inference_client_red.py:161: AssertionError   (assert_job_saved status: 503 generic message instead of 200)
+   1 test_clone_flow.py:85: AssertionError              (exact CFR-1 comparison)
+   1 test_ai_gateway_telemetry_red.py:70: AssertionError (503 instead of 202)
+  ```
+  The seven `:161` cases are C4-T1, the three C4-T2 cases, C4-T3, C4-T11 and C4-T18, as predicted. Error-text count `0`.
+- C4-V4 `git status --short`: ` M tests/test_ai_gateway_telemetry_red.py`, ` M tests/test_clone_flow.py`, `?? docs/.ai/chatterbox-cloud-run/003_Implementation_Plan_Inference_Client_RED.md`, `?? tests/_chatterbox_boundary.py`, `?? tests/test_inference_client_red.py` (checked before this status update).
+
+Result: C4-AC-1 (exact content of the four files; no other file changed), C4-AC-2 (71 collected, no collection, import or fixture error), C4-AC-3 (each of the 49 new cases, RF-14 and RF-15 fails with an `AssertionError` from its own or the `_Harness` assertions; no invalid-RED failure class occurred), C4-AC-4 (the 20 other tests pass: 13 CRM-2, 5 gateway, `test_voice_enrollment_creates_profile`, `test_generation_uses_selected_voice_profile`) and C4-AC-5 (C4-V2 repeats C4-V1) are met. The failures show the missing behavior: the unmodified inference service sends a tokenless JSON body, which the stand-in Chatterbox answers `401`, and answers every cloning failure with its single generic message instead of CFR-1–CFR-9. The CFR strings in the tests match `API-Contract.md` CFR-1–CFR-9 word for word. New tests passing at RED: none, matching the plan's "Preserved-behavior tests (expected to pass at RED): none". Known pre-existing failures: none named; none occurred.
+
+Deviations: the commands were run from Git Bash as `./.venv/Scripts/python.exe -m pytest …` (same interpreter and arguments as the planned PowerShell form), with output written to session-scratchpad logs and searched with `grep`. Read-only checks added: the `diff -u` comparison with the plan's diff blocks at step 4, and the error-text and failure-location counts. Planned commands ran in the planned order (C4-V5, C4-V1, C4-V2, C4-V3, C4-V4). Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started; each exited, and the loopback `uvicorn` stand-ins stopped with their tests. Scratch files are in the session scratchpad only. CRM-5 (GREEN) is not started and needs its own approved Implementation Plan.
 
 ## Risks
 

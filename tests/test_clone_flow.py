@@ -82,5 +82,7 @@ def test_voice_cloning_returns_guidance_when_clone_backend_unavailable(monkeypat
 
     assert response.status_code == 503, response.text
     detail = response.json()["detail"]
-    assert "Please retry" in detail
-    assert "Google voice narration mode" in detail
+    assert detail == (
+        "Voice cloning failed: no voice cloning service is configured. "
+        "Please retry, or use Google voice narration mode."
+    )
