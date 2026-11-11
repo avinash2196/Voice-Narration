@@ -4,16 +4,21 @@ import json
 import os
 import sqlite3
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from datetime import datetime, timezone
 from pathlib import Path
 import httpx
 import time
 
+import google.auth.transport.requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from google.oauth2 import service_account
 
 from voice_narration.inference.providers import GoogleVoiceProvider
+from voice_narration.inference.providers.google import _load_local_env
 
 ROOT = Path(__file__).resolve().parents[2]
 AUDIO_ROOT = ROOT / "audio_storage"
@@ -25,6 +30,20 @@ VOICE_CLONING_API_BASE_URL = os.getenv("VOICE_CLONING_API_BASE_URL", CHATTERBOX_
 GATEWAY_DEFAULT_MODEL_ID = "chatterbox-multilingual-v3"
 GATEWAY_ALLOWED_LANGUAGES = {"hi", "en"}
 GATEWAY_ALLOWED_MODES = {"narration", "voice_cloning"}
+VOICE_CLONING_TIMEOUT_DEFAULT_SECONDS = 600
+
+
+def _parse_voice_cloning_timeout(raw: str | None) -> int | None:
+    value = (raw or "").strip()
+    if not value:
+        return VOICE_CLONING_TIMEOUT_DEFAULT_SECONDS
+    if not (value.isascii() and value.isdigit()):
+        return None
+    seconds = int(value)
+    return seconds if seconds >= 1 else None
+
+
+VOICE_CLONING_TIMEOUT_SECONDS = _parse_voice_cloning_timeout(os.getenv("VOICE_CLONING_TIMEOUT_SECONDS"))
 
 _gateway_models: dict[str, dict] = {
     GATEWAY_DEFAULT_MODEL_ID: {
@@ -96,23 +115,87 @@ def _profile_lookup(voice_profile_id: str) -> dict:
     return dict(row)
 
 
+def _voice_cloning_failure(reason: str) -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail=f"Voice cloning failed: {reason}. Please retry, or use Google voice narration mode.",
+    )
+
+
+def _voice_cloning_identity_token(audience: str) -> str:
+    _load_local_env()
+    key_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+    if not key_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS is not set")
+    info = json.loads(Path(key_path).read_text(encoding="utf-8"))
+    if not isinstance(info, dict) or info.get("type") != "service_account":
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS does not name a service-account key")
+    credentials = service_account.IDTokenCredentials.from_service_account_info(info, target_audience=audience)
+    credentials.refresh(google.auth.transport.requests.Request())
+    return credentials.token
+
+
+def _post_voice_cloning_request(
+    url: str, token: str, text: str, language: str, sample: bytes, limit: int, deadline: float
+) -> tuple[int, str, bytes]:
+    with httpx.Client(timeout=limit) as client:
+        with client.stream(
+            "POST",
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            data={"text": text, "language": language},
+            files={"sample_audio": ("sample.wav", sample, "audio/wav")},
+        ) as response:
+            chunks: list[bytes] = []
+            for chunk in response.iter_bytes():
+                if time.monotonic() >= deadline:
+                    raise httpx.ReadTimeout("voice cloning time limit reached", request=response.request)
+                chunks.append(chunk)
+            return response.status_code, response.headers.get("content-type", ""), b"".join(chunks)
+
+
 def _synthesize_via_chatterbox_api(text: str, profile: dict, output_path: Path, mode: str) -> bool:
     if mode != "voice_cloning":
         return False
-    if not VOICE_CLONING_API_BASE_URL:
-        return False
-    payload = {
-        "text": text,
-        "language": str(profile.get("language") or "en").split("-")[0].lower(),
-        "sample_path": profile.get("sample_path"),
-    }
+    base_url = VOICE_CLONING_API_BASE_URL
+    if not base_url:
+        raise _voice_cloning_failure("no voice cloning service is configured")
+    limit = VOICE_CLONING_TIMEOUT_SECONDS
+    if limit is None:
+        raise _voice_cloning_failure("VOICE_CLONING_TIMEOUT_SECONDS must be a positive whole number of seconds")
+    sample_path = profile.get("sample_path")
     try:
-        response = httpx.post(f"{VOICE_CLONING_API_BASE_URL}/v1/synthesize", json=payload, timeout=120.0)
+        if not sample_path:
+            raise FileNotFoundError("the voice profile has no stored sample_path")
+        sample = Path(sample_path).read_bytes()
+    except OSError:
+        raise _voice_cloning_failure("the voice sample for this profile could not be read") from None
+    try:
+        token = _voice_cloning_identity_token(base_url)
     except Exception:
-        return False
-    if response.status_code != 200:
-        return False
-    output_path.write_bytes(response.content)
+        raise _voice_cloning_failure("could not obtain an identity token for the voice cloning service") from None
+    language = str(profile.get("language") or "en").split("-")[0].lower()
+
+    deadline = time.monotonic() + limit
+    executor = ThreadPoolExecutor(max_workers=1)
+    call = executor.submit(
+        _post_voice_cloning_request, f"{base_url}/v1/synthesize", token, text, language, sample, limit, deadline
+    )
+    executor.shutdown(wait=False)
+    try:
+        status_code, content_type, body = call.result(timeout=max(0.0, deadline - time.monotonic()))
+    except (FutureTimeoutError, httpx.TimeoutException):
+        raise _voice_cloning_failure(f"the voice cloning service did not respond within {limit} seconds") from None
+    except Exception:
+        raise _voice_cloning_failure("could not connect to the voice cloning service") from None
+
+    if status_code in (401, 403):
+        raise _voice_cloning_failure(f"access to the voice cloning service was denied (HTTP {status_code})")
+    if status_code != 200:
+        raise _voice_cloning_failure(f"the voice cloning service returned an error (HTTP {status_code})")
+    if content_type.split(";", 1)[0].strip().lower() != "audio/wav" or not body:
+        raise _voice_cloning_failure("the voice cloning service returned a response that is not audio")
+    output_path.write_bytes(body)
     return True
 
 
@@ -176,11 +259,6 @@ def create_job(payload: dict) -> dict:
     out_dir.mkdir(exist_ok=True)
     out_path = out_dir / f"{job_id}.wav"
     generated = _synthesize_via_chatterbox_api(text, profile, out_path, str(mode))
-    if mode == "voice_cloning" and not generated:
-        raise HTTPException(
-            status_code=503,
-            detail="Voice cloning service is unavailable. Please retry, or use Google voice narration mode.",
-        )
     if not generated:
         provider = GoogleVoiceProvider()
         provider.generate(text, profile, out_path)
