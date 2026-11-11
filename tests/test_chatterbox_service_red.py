@@ -1,10 +1,13 @@
-"""CRM-2 RED: Chatterbox model API synthesize behavior (chatterbox-cloud-run API-Contract.md).
+"""CRM-2 and CRM-7 RED: Chatterbox model API synthesize behavior and model loading
+(chatterbox-cloud-run API-Contract.md).
 
 The model runtime (torch, torchaudio, chatterbox) is not installed locally and is never
 loaded here. Each test installs stand-in runtime modules in ``sys.modules`` before it
 imports the Chatterbox application, so no CUDA, model weights or network access is needed.
 The stand-ins only record what the application hands to the model and encode the samples
 the model returns as WAV; every asserted behavior is produced by the application itself.
+The stand-in model loader accepts exactly the loading arguments of the pinned
+chatterbox-tts 0.1.7 release, ``from_pretrained(cls, device)``.
 """
 
 from __future__ import annotations
@@ -30,6 +33,9 @@ from fastapi.testclient import TestClient
 
 APP_MODULE = "voice_narration.chatterbox_api.application"
 SYNTHESIZE = "/v1/synthesize"
+HEALTH = "/health"
+METADATA = "/v1/metadata"
+METADATA_MODEL_ID = "chatterbox-multilingual-v3"
 FAKE_SAMPLE_RATE = 24000
 GENERATED_SAMPLES = [0.0, 0.25, -0.25, 0.5]
 SAMPLE_PATH_DETAIL = "sample_path is not supported; send the voice sample as sample_audio"
@@ -42,6 +48,7 @@ class _Recorder:
     def __init__(self) -> None:
         self.lock = threading.Lock()
         self.calls: list[dict] = []
+        self.loaded_devices: list[str] = []
         self.active = 0
         self.max_active = 0
         self.delay_seconds = 0.0
@@ -101,7 +108,11 @@ class _FakeMultilingualTTS:
     sr = FAKE_SAMPLE_RATE
 
     @classmethod
-    def from_pretrained(cls, device, **kwargs) -> "_FakeMultilingualTTS":
+    def from_pretrained(cls, device) -> "_FakeMultilingualTTS":
+        """Same parameters as the pinned release's loader: the device is the only one."""
+        recorder = cls.recorder
+        with recorder.lock:
+            recorder.loaded_devices.append(device)
         return cls()
 
     def generate(self, text, language_id, audio_prompt_path=None, **kwargs) -> _FakeTensor:
@@ -182,6 +193,22 @@ def chatterbox(monkeypatch, tmp_path):
         yield _Harness(application, recorder, temp_root)
     finally:
         sys.modules.pop(APP_MODULE, None)
+
+
+def _reimport_with_settings(chatterbox: _Harness, monkeypatch, settings: dict[str, str | None]) -> _Harness:
+    """Imports a fresh application under ``settings``; a ``None`` value removes the setting.
+
+    The application reads its settings when it is imported, so the copy the fixture
+    imported is replaced. The stand-in runtime and the recorder stay the fixture's.
+    """
+    for name, value in settings.items():
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    sys.modules.pop(APP_MODULE, None)
+    application = importlib.import_module(APP_MODULE)
+    return _Harness(application, chatterbox.recorder, chatterbox.temp_root)
 
 
 def _unique_sample() -> bytes:
@@ -488,3 +515,54 @@ def test_synthesize_contract_answers_over_real_transport(chatterbox):
             json_body = client.post(SYNTHESIZE, json={"text": "Hello there", "language": "en"})
         _assert_validation_error(json_body)
         assert len(chatterbox.recorder.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("configured_device", "expected_device"),
+    [(None, "cpu"), ("cuda", "cuda")],
+    ids=["default-device", "configured-device"],
+)
+def test_synthesize_loads_model_with_pinned_loader_on_configured_device(
+    chatterbox, monkeypatch, configured_device, expected_device
+):
+    harness = _reimport_with_settings(chatterbox, monkeypatch, {"CHATTERBOX_DEVICE": configured_device})
+    client = harness.client()
+    health = client.get(HEALTH)
+    assert health.status_code == 200, health.text
+    assert health.json()["device"] == expected_device
+    sample = _unique_sample()
+
+    response = client.post(SYNTHESIZE, data=_form(), files=_sample_file(sample))
+
+    _assert_valid_wav_answer(response)
+    assert harness.recorder.loaded_devices == [expected_device]
+    assert harness.recorder.calls[0]["prompt_bytes"] == sample
+
+
+@pytest.mark.parametrize(
+    ("configured_variant", "expected_variant"),
+    [(None, "v3"), ("v9-test", "v9-test")],
+    ids=["default-variant", "configured-variant"],
+)
+def test_metadata_answers_model_identity_after_pinned_load(
+    chatterbox, monkeypatch, configured_variant, expected_variant
+):
+    harness = _reimport_with_settings(
+        chatterbox,
+        monkeypatch,
+        {"CHATTERBOX_MODEL_VARIANT": configured_variant, "CHATTERBOX_DEVICE": None},
+    )
+    client = harness.client()
+    health = client.get(HEALTH)
+    assert health.status_code == 200, health.text
+    assert health.json()["model_variant"] == expected_variant
+
+    response = client.get(METADATA)
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "model_id": METADATA_MODEL_ID,
+        "model_version": expected_variant,
+        "sample_rate_hz": FAKE_SAMPLE_RATE,
+    }
+    assert harness.recorder.loaded_devices == ["cpu"]

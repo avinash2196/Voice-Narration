@@ -40,7 +40,7 @@ _generation_lock = threading.Lock()
 def _get_model() -> ChatterboxMultilingualTTS:
     global _model
     if _model is None:
-        _model = ChatterboxMultilingualTTS.from_pretrained(device=DEVICE, t3_model=MODEL_VARIANT)
+        _model = ChatterboxMultilingualTTS.from_pretrained(device=DEVICE)
     return _model
 
 

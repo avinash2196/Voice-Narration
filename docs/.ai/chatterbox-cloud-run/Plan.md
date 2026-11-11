@@ -2,7 +2,12 @@
 
 ## Status
 
-Approved by avinash2196 on 2026-11-09. Approval recorded by the main conversation at the user's explicit approval ("Approve Plan"). The CONTRACT milestone (CRM-1) may proceed; every later milestone still requires its approved predecessor and its own reviewed Implementation Plan.
+Revision 2 — approved by avinash2196 on 2026-11-10 ("Approve revision 2").
+
+Revision history:
+
+- Revision 1: approved by avinash2196 on 2026-11-09 ("Approve Plan"). Under it, CRM-1 to CRM-5 were executed; their rows and evidence below are unchanged by revision 2.
+- Revision 2 (2026-11-10): replanning on question C6-Q-1 of `005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md` (the deployed Chatterbox cannot load its model with the pinned model runtime). [User: C6-Q-1, 2026-11-10] Option 1 — add a RED milestone and a GREEN milestone for Chatterbox model loading before CRM-6, fixing the defect before deploying rather than approving CRM-6 with a known defect. Revision 2 adds CRM-7 (RED) and CRM-8 (GREEN) between CRM-5 and CRM-6, and makes CRM-8 the predecessor of CRM-6.
 
 ## Objective
 
@@ -49,11 +54,21 @@ Existing tests (baseline run `.\.venv\Scripts\python.exe -m pytest tests -ra -q`
 - Affected by this work item: `test_voice_cloning_returns_guidance_when_clone_backend_unavailable` asserts the generic message's wording for the no-backend case (RF-14; `tests/test_clone_flow.py:55-86`); `test_gateway_execution_returns_non_placeholder_telemetry` replaces the inference service's HTTP call to Chatterbox with a fake response accepting any arguments (RF-15; `tests/test_ai_gateway_telemetry_red.py:41-78`).
 - Preserved, covering behavior this work item must not change: `test_voice_enrollment_creates_profile` and `test_generation_uses_selected_voice_profile` (`tests/test_clone_flow.py:8-52`; the latter exercises narration through Google TTS), and the five tests in `tests/test_ai_gateway_red.py`.
 
+Chatterbox model loading (inspected for revision 2 on 2026-11-10 at commit `9be9ca8`; affects AC-CCR-1):
+
+- Chatterbox loads its model on first use by calling the model runtime's loader with two keyword arguments, the device and `t3_model=MODEL_VARIANT` (`voice_narration/chatterbox_api/application.py:40-44`, `:43`). The call predates this work item (commit `6d56d1e`) and was kept unchanged by CRM-3.
+- `requirements-dev.txt:10` pins `chatterbox-tts==0.1.7`. In that release the loader is `def from_pretrained(cls, device: torch.device)` (`chatterbox/mtl_tts.py:202`), with no `t3_model` parameter and no `**kwargs`. Re-read for this revision from the PyPI wheel (SHA-256 `83782500e3ad4e7c919132e9d7eb8755f29f57c5bde5ec48c655ca23a4eb113c`, the same file `005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md` Planning-Time Dry Run step 6 records); nothing was installed.
+- Consequence, derived from the code and not observed at runtime (the model runtime is not installed locally): the first model load raises `TypeError`. Model loading runs outside the generation error handling (`application.py:51-61`), so synthesize answers with the contract's failure 7 (an unhandled error), and metadata, which also loads the model (`application.py:138-145`), answers with its contracted model-load failure. Health does not load the model and is unaffected. The inference service then answers every voice cloning job with its Chatterbox-error failure reason.
+- The `CHATTERBOX_MODEL_VARIANT` value is also reported by health and metadata (`application.py:78-84`, `:141-145`), as the contract defines (`API-Contract.md` Chatterbox Health and Chatterbox Metadata).
+- No test exposes the defect: the 13 Chatterbox tests added by CRM-2 isolate the model runtime with a stand-in whose loader accepts any keyword (`tests/test_chatterbox_service_red.py:103-105`), and no test exercises metadata. The full suite passed `71 passed` at CRM-5 (CRM-5 Execution Evidence).
+- Classification (`prompt-driven-development` Failing Tests): production is wrong and no test exposes it, so the fix is a RED milestone that writes or changes tests, then a GREEN milestone.
+
 ## In Scope
 
 - An API/external contract for the changed Chatterbox synthesize request, the inference service's cloning-failure answer, and the local settings the inference service reads to call the private Chatterbox (CCR-5–CCR-9).
 - Chatterbox accepting the voice sample audio in each synthesis request in place of a file path, holding no voice sample or generated audio after responding, and serving one cloning request at a time while others wait (CCR-6, CCR-10, Consistency and concurrency).
 - The local inference service sending the voice sample audio with each cloning request, attaching the service account's Google identity token, bounding each cloning request by a configurable 10-minute limit, and reporting the reason for a cloning failure (CCR-5, CCR-7, CCR-8, CCR-9).
+- Chatterbox loading its model through the loading interface of the model runtime release the repository pins, with the configured device, so that its contracted synthesize and metadata success answers can be produced when deployed (AC-CCR-1; [User: C6-Q-1, 2026-11-10]).
 - A deployment document for running Chatterbox on Cloud Run in the required project, region and GPU, private to the service account, scaling to zero with at most one instance and one request at a time, and with a request time limit that accommodates CCR-9 — plus changes to the existing Chatterbox container build and deployment artifacts only where the documented steps need them (CCR-1, CCR-3, CCR-4, CCR-7, CCR-11, Deployment).
 
 ## Out of Scope
@@ -69,6 +84,7 @@ Existing tests (baseline run `.\.venv\Scripts\python.exe -m pytest tests -ra -q`
 - Constraint from another work item: "AGW-011 (Separate model service deployment): Chatterbox must run as a separate self-hosted Cloud Run service exposing an API consumed by the AI Gateway". [Artifact: ai-gateway-multimodel/requirements.md AGW-011]
 - Constraint: the approved AI Gateway contract (`docs/.ai/ai-gateway-multimodel/contract/API-Contract.md`, approved 2026-11-08) is unchanged by this work item (see External Contract Requirements).
 - Repository facts RF-1–RF-15 and the facts listed under Current State.
+- Replanning decision: the Chatterbox model-loading defect is fixed in this work item by a RED milestone and a GREEN milestone before CRM-6. [User: C6-Q-1, 2026-11-10]
 
 ## Non-Blocking Open Decisions
 
@@ -87,16 +103,18 @@ A contract is required: this work item changes externally observable behavior of
   4. The exact failure reasons and message wording of the inference service's cloning-failure answer (CCR-8), including the existing no-backend-configured case (RF-14) — deferred to the contract by the requirements.
   5. The name and form of the setting that configures the 10-minute time limit (CCR-9) — deferred to the contract by the requirements.
   6. The local settings the inference service reads to call the private Chatterbox with the service account's identity (CCR-7), starting from the existing base URL settings (RF-9) as baseline.
+- The model-loading fix of CRM-7 and CRM-8 changes no contract: it makes the approved contract's existing synthesize success answer and metadata success answer reachable with the pinned model runtime, and keeps health and metadata reporting the model variant setting as contracted. `API-Contract.md` is a constraint for CRM-7 and CRM-8; no amendment and no CONTRACT milestone is recorded for them.
 - Unchanged contract referenced as a constraint: the AI Gateway contract (`docs/.ai/ai-gateway-multimodel/contract/API-Contract.md`). Its request, response and error shapes stay as approved; the changed cloning-failure message reaches its error message text through the existing pass-through (`voice_narration/inference/application.py:363-366`). No CONTRACT milestone is recorded for it.
 
 ## Milestones
 
-Decomposition: Split: independent capabilities and different verification setup — the Chatterbox service's request handling, retention and one-at-a-time serving are verified on their own without the model runtime, CUDA or weights (Current State; `docs/developer-setup.md`), while the inference service's sample sending, identity attachment, time limit and failure reporting are verified on their own against the Chatterbox boundary without network access; each pair also stays reviewable as exact code. Split: no behavior change — the deployment document and any container build and deployment artifact changes change no service behavior and are an OTHER milestone, placed last because it documents the settings CRM-1 defines and the behavior CRM-3 and CRM-5 deliver.
+Decomposition: Split: independent capabilities and different verification setup — the Chatterbox service's request handling, retention and one-at-a-time serving are verified on their own without the model runtime, CUDA or weights (Current State; `docs/developer-setup.md`), while the inference service's sample sending, identity attachment, time limit and failure reporting are verified on their own against the Chatterbox boundary without network access; each pair also stays reviewable as exact code. Split: no behavior change — the deployment document and any container build and deployment artifact changes change no service behavior and are an OTHER milestone, placed last because it documents the settings CRM-1 defines and the behavior CRM-3, CRM-5 and CRM-8 deliver. Split (revision 2): ordering — Chatterbox model loading is a behavior change found while planning CRM-6 (C6-Q-1) that an OTHER milestone may not make, and the user chose to have it verified before the deployment is documented ([User: C6-Q-1, 2026-11-10]); it is its own RED milestone (CRM-7) and GREEN milestone (CRM-8) after CRM-5 and before CRM-6. Decomposition (CRM-7 and CRM-8 only): one pair, one plan — the pair changes no contract and touches at most about 3 production or build files, so one paired Implementation Plan holds a RED part and a GREEN part; CRM-7 and CRM-8 keep separate Execution Status rows, and RED evidence is recorded before any production change.
 
 Prerequisite coverage (Plan Content Rule 11):
 
 - CRM-2 (Chatterbox Service RED): after CRM-1 the repository provides the test runner with `pytest.ini` and the web-framework test client and HTTP client declared in `requirements-dev.txt:1-5` and installed in `.venv`. The model runtime is not installed locally; per `docs/developer-setup.md` local tests need no CUDA or model weights and may isolate boundaries, so the RED tests isolate the model runtime boundary within their own test code without supplying the behavior being proved. No dependency, build configuration or test infrastructure is missing, so no FOUNDATION milestone precedes CRM-2.
 - CRM-4 (Inference Client RED): after CRM-3 the repository provides the same test tooling, and the existing tests already isolate the inference service's call to Chatterbox (`tests/test_ai_gateway_telemetry_red.py:46-47`). The RED tests isolate the Chatterbox call and the identity-token source within their own test code, making no network call. No prerequisite is missing, so no FOUNDATION milestone precedes CRM-4.
+- CRM-7 (Chatterbox Model Loading RED): after CRM-5 the repository provides the same test runner, web-framework test client and HTTP client, and the Chatterbox tests of CRM-2 already isolate the model runtime boundary within their own test code, as `docs/developer-setup.md` permits. The model runtime stays uninstalled locally; CRM-7's tests isolate it the same way, without supplying the behavior being proved. No dependency, build configuration or test infrastructure is missing, so no FOUNDATION milestone precedes CRM-7.
 - No FOUNDATION milestone exists in this Plan.
 
 ### CRM-1 — Chatterbox Cloud Run Contract
@@ -169,19 +187,45 @@ Prerequisite coverage (Plan Content Rule 11):
 - Explicit exclusions: no Chatterbox change; no frontend, voices-service or narration change; no AI Gateway contract change; no user login or authentication; no logging, metrics or alerts.
 - Success criteria: CRM-4's tests pass and every verification command passes, including the preserved narration test listed under Current State.
 
+### CRM-7 — Chatterbox Model Loading RED
+
+- Capability / purpose: Tests that specify Chatterbox loading its model through the loading interface of the model runtime release the repository pins.
+- Rationale: Added in revision 2 ([User: C6-Q-1, 2026-11-10]). Chatterbox's model load passes a loading argument the pinned release does not accept, and no test exposes it because the existing isolation of the model runtime accepts any loading argument (Current State, Chatterbox model loading). RED proves the defect before production changes.
+- Milestone type: RED
+- Predecessor: CRM-5.
+- Scope: Tests verifying that, when the model runtime accepts exactly the loading arguments of the pinned release (the device only):
+  - a valid synthesize request is answered with the contract's success answer, generated audio, rather than a model-load failure;
+  - the metadata operation is answered with the contract's success answer, still reporting the model variant setting as the contract defines;
+  - the device setting (RF-5) is the device the model is loaded on.
+  The Chatterbox tests added by CRM-2 may be brought into line with the same loading interface where they isolate the model runtime, keeping every one of their assertions. The tests run without the model runtime, CUDA or model weights.
+- Owned requirements / concerns: none (verifies Chatterbox model loading through the pinned model runtime's loading interface).
+- Explicit exclusions: no production change; no change to the inference-service tests or other existing tests beyond the CRM-2 Chatterbox tests' isolation of the model runtime; no assertion weakened or removed; no dependency, declared runtime version, build or test-infrastructure change; no test that installs the model runtime or acquires model weights; no change to the contract.
+- Success criteria: the new or aligned tests fail because Chatterbox's model load passes a loading argument the pinned release does not accept — shown as their own assertion failures, not import, configuration, dependency, transport or environment errors — and every other test passes.
+
+### CRM-8 — Chatterbox Model Loading GREEN
+
+- Capability / purpose: Chatterbox loads its model with the pinned model runtime, so synthesize and metadata can answer as contracted.
+- Rationale: Smallest production change that makes CRM-7's evidence pass. Placed before CRM-6 so the documented deployment can serve voice cloning (AC-CCR-1).
+- Milestone type: GREEN
+- Predecessor: CRM-7.
+- Scope: The behavior that makes CRM-7's tests pass: Chatterbox loads its model on first use with the configured device, passing only loading arguments the pinned release accepts; synthesize and metadata then give the contract's success answers; health and metadata keep reporting the model variant setting as contracted; every other Chatterbox behavior delivered by CRM-3 stays as it is.
+- Owned requirements / concerns: Chatterbox model loading through the pinned model runtime's loading interface (defect C6-Q-1).
+- Explicit exclusions: no inference-service change; no change to the contract or to the contracted answers of health, metadata or synthesize; no change to dependency declarations or the pinned runtime version; no container, deployment or documentation change; no logging, metrics or alerts.
+- Success criteria: CRM-7's tests pass and every verification command passes.
+
 ### CRM-6 — Chatterbox Cloud Run Deployment Document
 
 - Capability / purpose: A how-to for deploying Chatterbox privately to Cloud Run as the requirements specify, and for configuring the local inference service to call it.
-- Rationale: Documentation and deployment-artifact work with no service behavior change; it documents settings CRM-1 defines and behavior CRM-3 and CRM-5 deliver.
+- Rationale: Documentation and deployment-artifact work with no service behavior change; it documents settings CRM-1 defines and behavior CRM-3, CRM-5 and CRM-8 deliver.
 - Milestone type: OTHER
-- Predecessor: CRM-5.
+- Predecessor: CRM-8 (revision 2; was CRM-5).
 - Scope: A deployment document, located as recorded under Non-Blocking Open Decisions, that describes how to: build the Chatterbox image; deploy it as a separate Cloud Run service (AGW-011) in project `project-84eb579f-1f7b-4f87-838`, region `asia-southeast1`, on an NVIDIA L4 GPU (CCR-1, CCR-3, CCR-4); make it private, callable only by `test-850@project-84eb579f-1f7b-4f87-838.iam.gserviceaccount.com` (CCR-7); let it scale to zero with at most 1 instance and one request at a time (Deployment, Consistency and concurrency); set a Cloud Run request time limit that accommodates the 10-minute cloning limit (CCR-9); and configure the local inference service with the settings the contract defines. Changes to the existing Chatterbox container build and deployment artifacts are included only where the documented steps cannot otherwise satisfy these items.
 - Owned requirements / concerns: CCR-1; CCR-3; CCR-4; CCR-11; Deployment characteristic (scale to zero, at most 1 instance).
-- No-behavior-change statement: the document and any container build or deployment artifact change alter no service's request handling, validation, failure answers or data handling; selecting the GPU device uses the existing device setting (RF-5). All behavior changes are delivered by CRM-3 and CRM-5.
+- No-behavior-change statement: the document and any container build or deployment artifact change alter no service's request handling, validation, failure answers or data handling; selecting the GPU device uses the existing device setting (RF-5). All behavior changes are delivered by CRM-3, CRM-5 and CRM-8.
 - Baseline evidence: recorded before any change — the current deployment instructions' content (placeholder project and region, `--allow-unauthenticated`, CPU device, no GPU, instance-count or request-time-limit options; `cloudrun/chatterbox-service/README.md:5-14`), the image's CPU device setting (`cloudrun/chatterbox-service/Dockerfile:14`), the build-context exclusions (`.dockerignore:1-4`), and a full test-suite run passing.
-- Preserved tests: the full suite — `test_voice_enrollment_creates_profile`, `test_generation_uses_selected_voice_profile`, `test_voice_cloning_returns_guidance_when_clone_backend_unavailable` and `test_gateway_execution_returns_non_placeholder_telemetry` as updated by CRM-4, the five tests in `tests/test_ai_gateway_red.py`, and the tests added by CRM-2 and CRM-4.
+- Preserved tests: the full suite — `test_voice_enrollment_creates_profile`, `test_generation_uses_selected_voice_profile`, `test_voice_cloning_returns_guidance_when_clone_backend_unavailable` and `test_gateway_execution_returns_non_placeholder_telemetry` as updated by CRM-4, the five tests in `tests/test_ai_gateway_red.py`, the tests added by CRM-2 and CRM-4, and the tests added or aligned by CRM-7.
 - Completion evidence: a checklist in the Implementation Plan's evidence showing where the document covers each item of AC-CCR-8 plus the request time limit and local configuration; no instruction to deploy publicly remains; the full suite passes; and, if this milestone changes the container build or the build-context exclusions, the Chatterbox image builds locally and, for an exclusions change, the harness image still builds and runs.
-- Explicit exclusions: performing the deployment; any service behavior change; moving the voices service, inference service, frontend or narration to GCP; the inference-service Cloud Run artifacts; custom logging, metrics or alerts.
+- Explicit exclusions: performing the deployment; any service behavior change, including Chatterbox model loading (owned by CRM-8); moving the voices service, inference service, frontend or narration to GCP; the inference-service Cloud Run artifacts; custom logging, metrics or alerts.
 - Success criteria: the completion evidence above is recorded and every verification command passes.
 
 ## Requirement Traceability
@@ -199,6 +243,7 @@ Prerequisite coverage (Plan Content Rule 11):
 | CCR-9 (configurable 10-minute time limit) | CRM-5 | CRM-4 |
 | CCR-10 (Chatterbox holds no voice sample or generated audio) | CRM-3 | CRM-2 |
 | CCR-10 local part (generated audio saved by the local app, RF-13) | none — preserved | CRM-4 |
+| Chatterbox model loading through the pinned model runtime's loading interface, with the configured device (defect C6-Q-1; needed for AC-CCR-1) | CRM-8 | CRM-7 |
 | CCR-11 (deployment document) | CRM-6 | CRM-6 (completion evidence) |
 | Contract decision: request shape for the sample audio | CRM-1 | human review of CRM-1 |
 | Contract decision: failure reasons and message wording | CRM-1 | human review of CRM-1 |
@@ -236,7 +281,9 @@ Prerequisite coverage (Plan Content Rule 11):
 | CRM-3 — Chatterbox Service GREEN (GREEN) | Complete | GREEN verified on 2026-11-09 by `002_Implementation_Plan_Chatterbox_Service_GREEN.md`: C3-AC-1–C3-AC-4 met; `application.py` matches the planned content (SHA-256 `10cc955b…c54a`); 22 of 22 tests pass in two consecutive full runs; the 13 CRM-2 tests pass on their own. See "CRM-3 Execution Evidence" below. |
 | CRM-4 — Inference Client RED (RED) | Complete | RED established on 2026-11-09 by `003_Implementation_Plan_Inference_Client_RED.md`: C4-AC-1–C4-AC-5 met; 4 files match the planned SHA-256; 71 collected, 51 fail on their own assertions (49 new cases, RF-14, RF-15), 20 pass, in two consecutive full runs. See "CRM-4 Execution Evidence" below. |
 | CRM-5 — Inference Client GREEN (GREEN) | Complete | GREEN verified on 2026-11-10 by `004_Implementation_Plan_Inference_Client_GREEN.md`: C5-AC-1–C5-AC-4 met; `voice_narration/inference/application.py` matches the planned content (SHA-256 `4a98dafc…1088`); 71 of 71 tests pass in two consecutive full runs; the 51 CRM-4 RED tests pass on their own; the generic message no longer occurs under `voice_narration/`. See "CRM-5 Execution Evidence" below. |
-| CRM-6 — Chatterbox Cloud Run Deployment Document (OTHER) | Pending | |
+| CRM-7 — Chatterbox Model Loading RED (RED) | Complete | RED established on 2026-11-10 by the RED part of `006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md`: C7-AC-1–C7-AC-5 met; `tests/test_chatterbox_service_red.py` matches the planned SHA-256 (`b421a77c…5225`); 75 collected, 12 fail on their own status assertions (8 aligned CRM-2 tests, 4 new C7 cases) because the load passes `t3_model`, 63 pass; the repeat run of the file gives the same 12 failures and 5 passes. See "CRM-7 Execution Evidence" below. |
+| CRM-8 — Chatterbox Model Loading GREEN (GREEN) | Complete | GREEN verified on 2026-11-10 by the GREEN part of `006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md`: C8-AC-1–C8-AC-4 met; `voice_narration/chatterbox_api/application.py` matches the planned SHA-256 (`a8432b4d…5281`), test file unchanged (`b421a77c…5225`); 75 of 75 pass in the full run; the repeat run of the Chatterbox file passes 17 of 17; `t3_model` no longer occurs. See "CRM-8 Execution Evidence" below. |
+| CRM-6 — Chatterbox Cloud Run Deployment Document (OTHER) | Pending | Predecessor changed to CRM-8 in revision 2. `005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md` is not approved (C6-Q-1 answered in revision 2) and needs review against revision 2 before approval. |
 
 ### CRM-2 Execution Evidence (stopped)
 
@@ -379,6 +426,72 @@ Result: C5-AC-1 (exact content; the five test hashes unchanged; no other file ch
 
 Deviations: the commands were run from Git Bash as `./.venv/Scripts/python.exe -m pytest …` (same interpreter and arguments as the planned PowerShell form), with output written to session-scratchpad logs and searched with `grep`. Read-only checks added: the `cmp` of the `diff -u` output with the plan's diff block, the non-ASCII byte check, the out-of-scope-path `git status`, and the `FAILED`/`ERROR` counts. Planned commands ran in the planned order (step 2, C5-V1, step 4, C5-V2, C5-V3, C5-V4, C5-V1, C5-V5, C5-V6, C5-V7). Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started; each exited, and the loopback stand-ins stopped with their tests. Scratch files are in the session scratchpad only. CRM-6 (OTHER) is not started and needs its own approved Implementation Plan.
 
+### CRM-7 Execution Evidence
+
+Executed on 2026-11-10 at commit `9be9ca8` from the RED part of `006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md` (Human Review: approved by avinash2196 on 2026-11-10, "Approve plan", including C7-D-1).
+
+- Step 2 `git status --short`: ` M docs/.ai/chatterbox-cloud-run/Plan.md`, `?? docs/.ai/chatterbox-cloud-run/005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md`, `?? docs/.ai/chatterbox-cloud-run/006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md` (all under the work-item folder). `git diff --quiet HEAD -- voice_narration/ tests/`: exit `0`.
+- Step 3 `sha256sum tests/test_chatterbox_service_red.py voice_narration/chatterbox_api/application.py`: `2ce5b014…56d4`, `10cc955b…c54a` (match).
+- Step 4: the plan's RED diff block (plan lines 140-265) was extracted with LF endings to a scratchpad file; `git -c core.autocrlf=false apply --check` then `git -c core.autocrlf=false apply`: exit `0`. `sha256sum tests/test_chatterbox_service_red.py`: `b421a77ca09692a67f9dbc50885ff8eb0d6024d40799e1a5ee8eb7d9a6325225`, 568 lines, no CR byte (match).
+- Compile `./.venv/Scripts/python.exe -m compileall -q tests voice_narration`: exit `0`.
+- C7-V1 `.\.venv\Scripts\python.exe -m pytest tests -ra` (exit 1):
+  ```
+  collected 75 items
+  tests\test_ai_gateway_red.py .....
+  tests\test_ai_gateway_telemetry_red.py .
+  tests\test_chatterbox_service_red.py F..F...FFFFFFFFFF
+  tests\test_clone_flow.py ...
+  tests\test_inference_client_red.py ..................................... (49 .)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_accepts_sample_audio_and_conditions_generation            (C2-T1)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_missing_or_non_file_parts_are_validation_errors           (C2-T4)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_generation_error_including_unusable_sample_answers_503    (C2-T8)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_holds_no_sample_or_audio_after_success                    (C2-T9)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_holds_no_sample_after_generation_failure                  (C2-T10)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_serves_concurrent_requests_one_at_a_time                  (C2-T11)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_repeated_identical_requests_each_generate                 (C2-T12)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_contract_answers_over_real_transport                      (C2-T13)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_loads_model_with_pinned_loader_on_configured_device[default-device]     (C7-T1)
+  FAILED tests/test_chatterbox_service_red.py::test_synthesize_loads_model_with_pinned_loader_on_configured_device[configured-device]  (C7-T1)
+  FAILED tests/test_chatterbox_service_red.py::test_metadata_answers_model_identity_after_pinned_load[default-variant]    (C7-T2)
+  FAILED tests/test_chatterbox_service_red.py::test_metadata_answers_model_identity_after_pinned_load[configured-variant] (C7-T2)
+  ================== 12 failed, 63 passed, 1 warning in 56.42s ==================
+  ```
+  Failure locations: `8 × :232` (`_assert_valid_wav_answer`, `assert 500 == 200`: C2-T1, C2-T4, C2-T9, C2-T11, C2-T12, C2-T13, both C7-T1 cases), `1 × :427` (`assert 500 == 503`, C2-T8), `1 × :458` (`assert 500 == 503`, C2-T10), `2 × :562` (`assert 500 == 200`, both C7-T2 cases); all 12 `AssertionError: Internal Server Error`. The captured `uvicorn` log of C2-T13 has 1 line `TypeError: _FakeMultilingualTTS.from_pretrained() got an unexpected keyword argument 't3_model'`. Count of `ModuleNotFoundError|ImportError|ReadError|ConnectError|RemoteProtocolError|did not start|fixture … not found`: `0`; `ERROR` result lines: `0`. The one warning is the existing `StarletteDeprecationWarning` from `fastapi/testclient.py:1`. Passing in the changed file: C2-T2, C2-T3, C2-T5, C2-T6, C2-T7 (existing tests that reject before generation and never load the model).
+- C7-V2 `.\.venv\Scripts\python.exe -m pytest tests/test_chatterbox_service_red.py -ra --tb=line` (repeat, no cleaning, exit 1): `collected 17 items`, `F..F...FFFFFFFFFF`, the same 12 `FAILED` lines, `12 failed, 5 passed, 1 warning in 2.41s`; locations `8 × :232`, `1 × :427`, `1 × :458`, `2 × :562`; import/transport/environment error count `0`.
+- C7-V3 `git status --short`: ` M docs/.ai/chatterbox-cloud-run/Plan.md`, ` M tests/test_chatterbox_service_red.py`, `?? docs/.ai/chatterbox-cloud-run/005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md`, `?? docs/.ai/chatterbox-cloud-run/006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md`.
+
+Why this is the intended RED: the `500` comes from the model load at `voice_narration/chatterbox_api/application.py:43` passing `t3_model`, which the stand-in loader with the pinned release's parameter list `from_pretrained(cls, device)` (`chatterbox/mtl_tts.py:201-202` of `chatterbox-tts` 0.1.7) rejects with `TypeError`; routes, imports and fixtures all work (the `GET /health` assertions in C7-T1 and C7-T2 pass before the failing assertion). Every changed or new assertion expresses the contract (Chatterbox Synthesize success, Chatterbox Metadata success body with `model_version` = `CHATTERBOX_MODEL_VARIANT`, Chatterbox Health `device`/`model_variant`) and RF-5; no CRM-2 assertion was changed. No new test asserts only an absence. New tests passing at RED: none, matching the plan's "Preserved-behavior tests (expected to pass at RED): none".
+
+Result: C7-AC-1 (exact content; no other file changed apart from this status record and the plan's Human Review status), C7-AC-2 (75 collected, no collection, import or fixture error), C7-AC-3 (exactly the 12 named tests fail on their own status assertions), C7-AC-4 (the other 63 pass, including C2-T2, C2-T3, C2-T5, C2-T6, C2-T7) and C7-AC-5 (the repeat run gives the same 12 failures and 5 passes) are met.
+
+Deviations: the commands were run from Git Bash as `./.venv/Scripts/python.exe -m pytest …` (same interpreter and arguments as the planned PowerShell form), with output written to session-scratchpad logs and searched with `grep`. Added, not in the plan's step list: `git apply --check` before the apply, the `compileall` step (`prompt-driven-development` Test Scope and Output, "compile everything"; it was also part of the planning dry run), the CR-byte check and the error-pattern counts. Planned commands ran in the planned order (step 2, step 3, step 4, C7-V1, C7-V2, C7-V3). Pre-authorized contingencies: none exist; none applied. Processes: only `compileall` and the pytest runs were started; each exited, and the loopback `uvicorn` stand-in of C2-T13 stopped with its test. Scratch files are in the session scratchpad only. CRM-8 (GREEN part of the same plan) is not started.
+
+### CRM-8 Execution Evidence
+
+Executed on 2026-11-10 at commit `9be9ca8` from the GREEN part of `006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md` (Human Review: "RED executed — see Plan.md; GREEN approved, not yet executed"; CRM-7 row Complete).
+
+- Step 2 `git status --short`: ` M docs/.ai/chatterbox-cloud-run/Plan.md`, ` M tests/test_chatterbox_service_red.py`, `?? docs/.ai/chatterbox-cloud-run/005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md`, `?? docs/.ai/chatterbox-cloud-run/006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md`. `sha256sum tests/test_chatterbox_service_red.py voice_narration/chatterbox_api/application.py`: `b421a77c…5225`, `10cc955b…c54a` (match).
+- Step 3: the plan's GREEN diff block (plan lines 271-281) was extracted with LF endings to a scratchpad file; `git -c core.autocrlf=false apply --check` then `git -c core.autocrlf=false apply`: exit `0`. `sha256sum voice_narration/chatterbox_api/application.py`: `a8432b4d4638bee6ed78e98f3eb167492be206086c1615259027ebd3e1ac5281`, 145 lines, no CR byte (match).
+- C8-V1 `.\.venv\Scripts\python.exe -m pytest tests -ra` (exit 0):
+  ```
+  collected 75 items
+  tests\test_ai_gateway_red.py .....
+  tests\test_ai_gateway_telemetry_red.py .
+  tests\test_chatterbox_service_red.py .................
+  tests\test_clone_flow.py ...
+  tests\test_inference_client_red.py ..................................... (49 .)
+  ======================= 75 passed, 1 warning in 47.93s ========================
+  ```
+  `FAILED`/`ERROR` line count `0`. The one warning is the existing `StarletteDeprecationWarning` from `fastapi/testclient.py:1`.
+- C8-V2 `.\.venv\Scripts\python.exe -m pytest tests/test_chatterbox_service_red.py -ra` (repeat, no cleaning, exit 0): `collected 17 items`, `17 passed, 1 warning in 4.62s`; `FAILED`/`ERROR` line count `0`.
+- C8-V3 `git grep -n "t3_model" -- voice_narration tests`: no output, exit `1`.
+- C8-V4 `git status --short` (before this status update): ` M docs/.ai/chatterbox-cloud-run/Plan.md`, ` M tests/test_chatterbox_service_red.py`, ` M voice_narration/chatterbox_api/application.py`, `?? …/005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md`, `?? …/006_Implementation_Plan_Chatterbox_Model_Loading_RED_Chatterbox_Model_Loading_GREEN.md`. `git diff --stat -- voice_narration/`: `voice_narration/chatterbox_api/application.py | 2 +-`, `1 file changed, 1 insertion(+), 1 deletion(-)`, with the expected `LF will be replaced by CRLF` warning; the one hunk (`@@ -40,7 +40,7 @@`) changes only the `from_pretrained` line in `_get_model`.
+- After the runs, `sha256sum`: `tests/test_chatterbox_service_red.py` `b421a77c…5225`, `voice_narration/chatterbox_api/application.py` `a8432b4d…5281` (unchanged).
+
+Result: C8-AC-1 (exact content; test file unchanged; no other file changed apart from this status record and the plan's Human Review status), C8-AC-2 (75 collected, 75 passed, no `FAILED` or `ERROR` line), C8-AC-3 (repeat run of the Chatterbox file 17 of 17) and C8-AC-4 (`t3_model` gone; one line changed in `_get_model` only) are met. The 12 tests that failed at CRM-7 (C2-T1, C2-T4, C2-T8–C2-T13, both C7-T1 and both C7-T2 cases) now pass, and the 63 that passed there still pass. Known pre-existing failures: none named; none occurred.
+
+Deviations: the commands were run from Git Bash as `./.venv/Scripts/python.exe -m pytest …` (same interpreter and arguments as the planned PowerShell form), with output written to session-scratchpad logs and searched with `grep`. Read-only checks added: `git apply --check` before the apply, the CR-byte and line-count check, the `FAILED`/`ERROR` counts, the `git diff` hunk view, and the after-run hashes. Planned commands ran in the planned order (step 2, step 3, C8-V1, C8-V2, C8-V3, C8-V4). Pre-authorized contingencies: none exist; none applied. Processes: only the pytest runs were started (C8-V1 in the background with a completion notice); each exited, and the loopback `uvicorn` stand-in of C2-T13 stopped with its test. Scratch files are in the session scratchpad only. CRM-6 (OTHER) is not started; `005_Implementation_Plan_Chatterbox_Cloud_Run_Deployment_Document.md` still needs review against revision 2 and approval.
+
 ## Risks
 
 - RSK-1 — Model runtime absent locally: the Chatterbox model API imports its model runtime at module load (`voice_narration/chatterbox_api/application.py:7-13`), and that runtime is not installed in the local environment (Current State). Mitigation: CRM-2's tests isolate the model runtime boundary within test code, as `docs/developer-setup.md` permits; CRM-2's success criteria reject import or environment failures as RED evidence.
@@ -390,12 +503,13 @@ Deviations: the commands were run from Git Bash as `./.venv/Scripts/python.exe -
 - RSK-7 — Changed message seen by other consumers: the cloning-failure message is shown by the frontend (`frontend/src/App.jsx:127-129`) and passed through by the gateway (`voice_narration/inference/application.py:363-366`). Mitigation: the message wording is a CRM-1 decision under human review; the gateway's error shape stays as approved.
 - RSK-8 — Voice cloning not reachable from the frontend: the frontend's generation request sends no mode (`frontend/src/App.jsx:116-124`), so it always uses narration; no requirement of this work item changes the frontend. Voice cloning is exercised through the inference service's job-creation operation or the gateway execution operation.
 - RSK-9 — Retry wording and gateway replay: the requirements record that "A retried request produces a new clip; no duplicate detection is required" for Chatterbox cloning requests. The approved AI Gateway contract replays the original response for a repeated idempotency key (`docs/.ai/ai-gateway-multimodel/contract/API-Contract.md:125`, `voice_narration/inference/application.py:338-343`). This Plan applies the retry statement to Chatterbox and does not change the gateway's idempotency behavior; the user confirms or corrects this reading at Plan review.
+- RSK-10 — Real model loading not exercised: the model runtime is not installed locally and `docs/developer-setup.md` says not to acquire model weights, so CRM-7's tests isolate the model runtime with the loading interface read from the pinned release (Current State, Chatterbox model loading), not with the installed runtime. If the declared runtime version changes, its loading interface may differ; dependency declarations stay out of scope (RSK-6). CRM-8's evidence shows the load passes only the pinned release's loading arguments; that the real model then loads on the deployed GPU is not observed, because performing the deployment is excluded (CCR-11).
 
 ## Final Acceptance Criteria
 
 | Criterion | Source | Demonstrated by |
 | --- | --- | --- |
-| Voice cloning requests from the local inference service are served by Chatterbox on Cloud Run in project `project-84eb579f-1f7b-4f87-838`, region `asia-southeast1`, on an NVIDIA L4 GPU, when deployed as documented | AC-CCR-1 | CRM-6 completion evidence and Final Review inspection of the deployment document (the deployment itself is excluded); CRM-5 evidence that cloning requests go to the configured Chatterbox |
+| Voice cloning requests from the local inference service are served by Chatterbox on Cloud Run in project `project-84eb579f-1f7b-4f87-838`, region `asia-southeast1`, on an NVIDIA L4 GPU, when deployed as documented | AC-CCR-1 | CRM-6 completion evidence and Final Review inspection of the deployment document (the deployment itself is excluded); CRM-5 evidence that cloning requests go to the configured Chatterbox; CRM-8 completion evidence that Chatterbox loads its model through the pinned model runtime's loading interface and answers synthesize with generated audio |
 | Narration keeps generating audio with Google TTS locally; voices service, inference service and frontend run locally | AC-CCR-2 | CRM-5 full-suite evidence (preserved test `test_generation_uses_selected_voice_profile`) and Final Review inspection that no local service was moved |
 | A voice cloning request sends the sample audio itself; Chatterbox's synthesize request no longer accepts the sample path | AC-CCR-3 | CRM-3 (Chatterbox side) and CRM-5 (inference side) completion evidence |
 | Chatterbox rejects calls without a valid identity token for the service account; the inference service attaches that account's token | AC-CCR-4 | CRM-5 completion evidence (token attached); Final Review inspection of CRM-6's document (Cloud Run rejection, since the deployment is excluded) |
