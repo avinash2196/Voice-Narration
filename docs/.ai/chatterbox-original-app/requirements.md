@@ -14,7 +14,7 @@ In the user's words: "all we wanted was use chatterbox from original FE and get 
 
 ## Status
 
-Approved by Avinash Srivastava on 2026-11-13 (revision recording Q41–Q45; the earlier version was approved on 2026-11-12).
+Approved by Avinash Srivastava on 2026-11-13 (revision recording Q46–Q48: automated tests no longer fake Chatterbox). The previous revision, recording Q41–Q45, was approved on 2026-11-13; the first version was approved on 2026-11-12.
 
 ## Relationship to Product-Level Requirements
 
@@ -69,7 +69,7 @@ Inspected at HEAD `664cee4`, the same commit as `feature/audio-download-persiste
 - **COA-13 Waiting and duplicates.** A generation request that arrives while another is generating waits. [User: Q25] The Generate button stays disabled during a generation, and no other duplicate prevention is added. [User: Q38]
 - **COA-14 Preserved behavior.** The mock, Google and Azure providers and the tests that check them stay unchanged. Google narration with Google voices keeps working as now, except that its text is no longer capped (COA-17). [User: Q12, Q33; Derived from Q41 — confirmed Q45]
 - **COA-15 Shared voice list.** All logged-in users share one voice list, and any of them may clone any voice in it. [Derived from recommended option — confirmed Q35]
-- **COA-16 Testing.** Automated tests use a fake Chatterbox with no network. The final check is the user's manual test against the deployed Cloud Run service. [User: Q13, Q24]
+- **COA-16 Testing.** Automated tests neither fake nor call Chatterbox. [User: Q46] They cover only behavior that needs no Chatterbox call: the four failure causes that occur before any call (not configured, invalid time-limit setting, voice sample unreadable, identity token unavailable), provider and language choice, the provider list, waiting, and Google narration unchanged. [User: Q47] Everything that involves calling Chatterbox — a successful clone, the chosen language, a cloned clip's history and retention, and the causes timed out, cannot connect, access denied, service error and a response that is not audio — is checked only in the user's manual test against the deployed Cloud Run service. [User: Q13, Q46, Q47] A cause the user cannot reproduce in that test is recorded as not verified. [User: Q48]
 - **COA-17 No text length limit.** The TTS page accepts text of any length for every provider; the 5000-character cap is removed. [User: Q17, Q41] The text is sent as entered, without splitting; if Google rejects long text, the user sees the error the app shows for a failed Google generation. [User: Q42] The "Max 5000 chars/request" label is removed. [User: Q43] The text box shows a plain count, "n characters", and the 90% warning and the maximum-reached message are removed. [User: Q44] The frontend tests and test mock that check the cap change to match. [Derived from Q41 — confirmed Q45]
 
 ### Constraints
@@ -100,7 +100,7 @@ Inspected at HEAD `664cee4`, the same commit as `feature/audio-download-persiste
 | Deployment | Each local service runs as one instance; Chatterbox runs on Cloud Run | [User: Q15, brief] |
 | Availability and latency | Availability: not required for this work item. Latency: a Chatterbox call may take up to the configurable limit, default 1200 s; cold starts take about 80–100 s | [User: Q40, Q26, brief] |
 | Consistency and concurrency | A request that arrives while another is generating waits. The Generate button stays disabled during a generation; no other duplicate prevention | [User: Q25, Q38] |
-| Dependency failure | When Chatterbox is unavailable, show the error for that cause; no fallback to Google. Automated tests run without Chatterbox, using a fake | [User: Q18, Q24] |
+| Dependency failure | When Chatterbox is unavailable, show the error for that cause; no fallback to Google. Automated tests neither fake nor call Chatterbox; failures that need a Chatterbox call are checked only in the manual Cloud Run test | [User: Q18, Q46, Q47] |
 | Observability | Not required for this work item | [User: Q28] |
 | Data durability and retention | Voices and samples survive a restart; each voice and its sample are deleted 5 days after upload, unrecoverable. Generated clips keep the existing 30-day retention | [Derived from recommended option — confirmed Q36] |
 
@@ -127,7 +127,7 @@ None.
 - **AC-3** With Chatterbox chosen, the user's recorded and uploaded voices are listed and selectable on `/tts`. → COA-3, COA-15
 - **AC-4** A Chatterbox generation for a recorded (Chrome) or WAV-uploaded voice returns speech that plays on the TTS page; the user hears the selected voice in the manual check against Cloud Run. → COA-4, COA-6, COA-12, COA-16
 - **AC-5** For a Chatterbox generation the user can choose English or Hindi, and the chosen language is used. → COA-5
-- **AC-6** Each of the nine failure causes in COA-7 produces its own message ending "Please retry, or choose another provider.", shown by automated tests against a fake Chatterbox. → COA-7, COA-16
+- **AC-6** Each of the nine failure causes in COA-7 produces its own message ending "Please retry, or choose another provider." Automated tests, with no Chatterbox call, show this for not configured, invalid time-limit setting, voice sample unreadable and identity token unavailable. The manual Cloud Run test shows it for timed out, cannot connect, access denied, service error and a response that is not audio, where the user can reproduce them; any it does not reproduce is recorded as not verified. → COA-7, COA-16
 - **AC-7** When Chatterbox fails, no Google audio is produced for that generation. → COA-8
 - **AC-8** The time limit is configurable with a default of 1200 s; a call exceeding it produces the timed-out message. → COA-9
 - **AC-9** A cloned generation appears in history, can be downloaded and deleted, and has a 30-day retention. → COA-10
@@ -152,7 +152,7 @@ None.
 | Q10 | One message per failure cause? What wording? | use recommended — proposal given and accepted in Q23 |
 | Q11 | Cloned generations in history, downloadable, deletable? | yes |
 | Q12 | Mock, Google, Azure and their tests unchanged? | yes |
-| Q13 | Automated tests with a fake Chatterbox, manual test on Cloud Run? | I will test manually — clarified in Q24 |
+| Q13 | Automated tests with a fake Chatterbox, manual test on Cloud Run? | I will test manually — clarified in Q24, fake replaced in Q46 |
 | Q14 | Anything else out of scope? | no |
 | Q15 | One instance per local service? | yes |
 | Q16 | One request at a time acceptable? Prevent double-click duplicates? | keep it simple — clarified in Q25/Q38 |
@@ -163,7 +163,7 @@ None.
 | Q21 | (Q7) Only Chrome recordings and WAV uploads must clone; MP3/OGG accepted but not required to clone? | yes |
 | Q22 | (Q9) Source stays on `feature/voice-cloning`, this work item only calls the deployed service? | keep it a separate service, but also put it on `main` — any issues? (answered in Q34) |
 | Q23 | (Q10) One message per cause for nine causes, ending "Please retry, or choose another provider."? | yes |
-| Q24 | (Q13) Automated tests with a fake Chatterbox, then manual test on Cloud Run? | yes |
+| Q24 | (Q13) Automated tests with a fake Chatterbox, then manual test on Cloud Run? | yes — superseded by Q46 |
 | Q25 | (Q16) A request arriving during a generation waits; nothing stops a double-click making two clips? | another should wait |
 | Q26 | (Q17) Configurable limit, default 600 s (a), or no limit (b)? | configurable, 1200 s |
 | Q27 | (Q18) Voices and samples survive restart, deleted 5 days after upload; clips keep 30-day retention? | recommended — confirmed in Q36 |
@@ -185,15 +185,19 @@ None.
 | Q43 | The "Max 5000 chars/request" label: (a) remove, or (b) keep? | use recommended (a) |
 | Q44 | The text-box counter: (a) plain "n characters", warnings removed, or (b) no counter? | use recommended (a) |
 | Q45 | Confirm: the cap tests and test mock change to match; COA-14 reads "as before, except that text is no longer capped". | use recommended (yes) |
+| Q46 | (Q24) Replace the fake Chatterbox in automated tests: (a) test against the deployed service, or (b) skip and test manually? | "dont try to fake chatterbox as that wont serve any purpse, either test it using deployed version or skip it"; then (b) "Skip, test manually" |
+| Q47 | (Q46) Automate the four pre-call causes plus "cannot connect" via an unused local address, or only the four pre-call causes? | only the 4 pre-call causes |
+| Q48 | (Q46) In the manual test, causes the user cannot reproduce (likely service error and not audio): (a) record as not verified, or (b) must verify all nine? | (a) accept as unverified |
 
 ## Provenance Check
 
-- Every item above carries a source label: checked Goal, Business Context, Repository-Confirmed Facts, COA-1–COA-17, CON-1–CON-6, S-1–S-8, the Operational Characteristics table, Deferred, Exclusions and AC-1–AC-13.
+- Every item above carries a source label: checked Goal, Status, Business Context, Repository-Confirmed Facts, COA-1–COA-17, CON-1–CON-6, S-1–S-8, the Operational Characteristics table, Deferred, Exclusions and AC-1–AC-13.
 - `Derived` items, each with its confirming `Qn`: COA-1 (Q30), COA-2 (Q29), COA-3 (Q37), COA-6 format path (Q37), COA-10 retention (Q36), COA-11 (Q36), COA-14 cap exception (Q45), S-3 cap exception (Q45), COA-15 (Q35), COA-17 test changes (Q45), Business Context actors (Q35) and retention rule (Q36), S-6 (Q36), durability row (Q36), the deferred decision (Q37), the per-user exclusion (Q35).
+- This revision (Q46–Q48): COA-16, AC-6 and the Dependency-failure row are restated from the user's own answers. Q46 is the user's instruction and choice; Q47 and Q48 are options the user picked explicitly. No new derived item.
 - `Left to` items: none.
-- `Repo` citations verified at HEAD `664cee4`: App.tsx:279-304; api-config.ts:9-10; VoiceRecorder.tsx:52, :67, :160; VoiceUpload.tsx:104-105; start-voice-service.bat:25; simple_voices/application.py:10, :102, :111, :113-114, :186-187; inference/__main__.py:33-58; registry.py:68-77; providers/base.py:16-21; inference/application.py:174, :343-373, :463; ttsApi.ts:7-19, :42-51, :102-150, :183-200; VoiceSelector.tsx:21-33; GenerationSubmitForm.tsx:133; tests/test_provider_registry.py:15-19; frontend/tests/tts.spec.tsx:155-211; .gitignore:5, :8; the absence of docs/requirements.md (verified in the 2026-11-12 capture at the same HEAD). Verified during this revision on 2026-11-13: TextToSpeechInput.tsx:4, :15, :34, :46, :49-53, :66-70; ProviderSelector.tsx:89; ttsApi.ts:199; google_tts.py:109-132; frontend/tests/tts.spec.tsx:83, :113-120, :130, :133-144; frontend/tests/mocks/tts-handlers.ts:27.
+- `Repo` citations: verified at HEAD `664cee4` in the earlier captures (listed below) and not changed by this revision, which adds no repository fact. Re-checked during this revision on 2026-11-13 at HEAD `d0a2a99`: since `664cee4` this work item's OAM-3 changed only `voice_narration/simple_voices/application.py` and `.gitignore` among cited files (plus new `recordings.py`, `store.py`). The Repository-Confirmed Facts state the pre-work baseline at `664cee4`; `git show 664cee4:voice_narration/simple_voices/application.py` still shows :10, :102, :111, :113-114 and :186-187 as cited, and `.gitignore:5`, `:8` are unchanged at the current HEAD. Earlier citations: App.tsx:279-304; api-config.ts:9-10; VoiceRecorder.tsx:52, :67, :160; VoiceUpload.tsx:104-105; start-voice-service.bat:25; simple_voices/application.py:10, :102, :111, :113-114, :186-187; inference/__main__.py:33-58; registry.py:68-77; providers/base.py:16-21; inference/application.py:174, :343-373, :463; ttsApi.ts:7-19, :42-51, :102-150, :183-200, :199; VoiceSelector.tsx:21-33; GenerationSubmitForm.tsx:133; TextToSpeechInput.tsx:4, :15, :34, :46, :49-53, :66-70; ProviderSelector.tsx:89; google_tts.py:109-132; tests/test_provider_registry.py:15-19; frontend/tests/tts.spec.tsx:83, :113-120, :130, :133-144, :155-211; frontend/tests/mocks/tts-handlers.ts:27; the absence of docs/requirements.md.
 - Requirements without an acceptance criterion: none (COA-1 AC-1; COA-2 AC-2; COA-3 AC-3; COA-4 AC-4; COA-5 AC-5; COA-6 AC-2, AC-4; COA-7 AC-6; COA-8 AC-7; COA-9 AC-8; COA-10 AC-9; COA-11 AC-10; COA-12 AC-4; COA-13 AC-12; COA-14 AC-11; COA-15 AC-3; COA-16 AC-4, AC-6; COA-17 AC-13). Constraints CON-1–CON-6 bound the work and have no criterion of their own.
 - Scenarios without an acceptance criterion: none.
-- Statements that contradict each other: none found. The no-length-limit rule, COA-17, S-8 and AC-13 agree. COA-14 and AC-11 state the cap removal as their one exception; the cap tests that change are frontend tests named in COA-17, so the provider tests in AC-11 still pass unchanged. COA-12 and the auto-approval fact agree. COA-1 (provider sent) does not change Google narration with Google voices.
-- Answers taken from a recommended option, each with its confirming `Qn`: shared voice list (Q2 → Q35); retention (Q27 → Q36); voices selectable and format path (Q31, Q32 → Q37); Q42–Q45 ("use recommended", answering the stated options). Q19 (a), Q20 (a), Q21, Q23, Q24, Q34 (a) and Q41 (b) were chosen explicitly by the user.
+- Statements that contradict each other: none found. Every reference to a fake Chatterbox is removed or marked superseded (COA-16, AC-6, the Dependency-failure row; Q13 and Q24 point to Q46). COA-16's manual list and AC-6's split name the same five causes; COA-16's automated list names the same four. AC-8's timed-out message and AC-9's cloned-clip history need a Chatterbox call and fall under COA-16's manual check; AC-12's waiting falls under its automated check. AC-6 now allows a cause to be recorded as not verified (Q48), which COA-7 does not contradict: COA-7 states the behavior, AC-6 how it is shown. The no-length-limit rule, COA-17, S-8 and AC-13 agree; COA-14 and AC-11 keep the cap removal as their one exception.
+- Answers taken from a recommended option, each with its confirming `Qn`: shared voice list (Q2 → Q35); retention (Q27 → Q36); voices selectable and format path (Q31, Q32 → Q37); Q42–Q45 ("use recommended", answering the stated options); Q48 (a), picked by the user from the stated options. Q19 (a), Q20 (a), Q21, Q23, Q34 (a), Q41 (b), Q46 (b) and Q47 were chosen explicitly by the user.
 - Nothing is copied from another work item's artifacts.
