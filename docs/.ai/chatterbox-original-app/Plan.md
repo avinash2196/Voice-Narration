@@ -331,7 +331,7 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 
 | Milestone | Status | Evidence / Notes |
 | --- | --- | --- |
-| OAM-1 Local service contract (CONTRACT) | Pending | — |
+| OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Pending | — |
 | OAM-3 Voice service GREEN | Pending | — |
 | OAM-4 Inference service RED | Pending | — |
