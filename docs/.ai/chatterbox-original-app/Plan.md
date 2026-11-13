@@ -332,13 +332,41 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 | Milestone | Status | Evidence / Notes |
 | --- | --- | --- |
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
-| OAM-2 Voice service RED | Pending | — |
+| OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
 | OAM-3 Voice service GREEN | Pending | — |
 | OAM-4 Inference service RED | Pending | — |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
 | OAM-7 TTS page GREEN | Pending | — |
 | OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
+
+### OAM-2 RED evidence
+
+Executed 2026-11-13 at HEAD `ff9d3ee`, Git Bash, from the repository root. Change: created `tests/test_voice_sample_persistence_red.py`, extracted verbatim from the plan's Proposed Code block (`001_Implementation_Plan_OAM-2.md` lines 152-578). No other repository file changed. Logs are in `$TEMP` (outside the repository).
+
+- Compile: `python -m compileall -q . -x '(node_modules|\.git|\.venv|frontend)'` exited 0.
+- Command 1: `python -m pytest tests/test_voice_sample_persistence_red.py -q > "$TEMP/oam2-red-run1.log" 2>&1; tail -1 …; grep -c "unexpected keyword argument 'root'" …` → `11 failed in 11.63s`; `11`. 0 passed, 0 errors. Failing tests (all 11 in the file):
+  - `test_chrome_recording_labelled_wav_is_stored_as_pcm_wav_holding_the_recording`
+  - `test_wav_upload_sample_is_stored_byte_identical`
+  - `test_mp3_and_ogg_uploads_are_accepted_and_kept_as_received[mp3-libmp3lame-voice.mp3-audio/mpeg-ID3]`
+  - `test_mp3_and_ogg_uploads_are_accepted_and_kept_as_received[ogg-libopus-voice.ogg-audio/ogg-OggS]`
+  - `test_new_voice_is_approved_automatically_and_its_sample_is_available_straight_away`
+  - `test_sample_answers_not_found_for_unknown_preloaded_and_sampleless_voices`
+  - `test_chrome_recording_that_cannot_be_converted_is_rejected_and_creates_no_voice`
+  - `test_voices_samples_and_renames_survive_a_restart_and_are_listed_for_every_caller`
+  - `test_voice_expires_120_hours_after_upload_and_is_removed_unrecoverably`
+  - `test_voice_uploaded_before_a_restart_expires_while_the_service_is_stopped`
+  - `test_deleting_a_voice_removes_its_sample_permanently_including_after_a_restart`
+- Failure causes (V2C-2): seven tests raise `TypeError: create_app() got an unexpected keyword argument 'root'` in the test process. Four tests (conversion failure, restart, stopped-service expiry, deletion) fail with `AssertionError: voice service exited during start:`, which quotes the same `TypeError` from the service log. No other cause appeared. The audio builders (`chrome_recording`, `encoded_audio` with `libmp3lame`/`libopus`, `unconvertible_webm`) ran before each failure, so V2R-4 did not occur.
+- Command 2 (second run, no cleanup): `11 failed in 12.56s`; grep count `11`; 11 `FAILED` lines, with the same four "exited during start" failures. Identical to run 1 (V2C-3).
+- Command 3: `python -m pytest --collect-only -q > "$TEMP/oam2-collect.log" 2>&1; tail -1 …` → `173 tests collected in 3.90s`, with no collection error (V2C-5).
+- Command 4: `git status --short -- audio_storage` → no output (V2C-4, OAV-3).
+- Command 5: `git status --short` → `?? tests/test_voice_sample_persistence_red.py`, plus the work-item changes under `docs/.ai/chatterbox-original-app/` (V2C-1).
+- Why this is valid RED: every failure comes from the absent approved seam `create_app(*, root, clock)` (V2D-1), which is part of the behavior OAM-3 must deliver. No failure comes from compilation, configuration, dependencies or the environment. As V2R-2 records, the behavior-level failures behind the seam were shown only by the planning stub. I re-read each assertion against `API-Contract.md` (Voice Upload sample storage and failure 2, Voice List ordering and contents, Voice Update, Voice Deletion, Voice Sample, Voice Retention). Each one asserts the contracted behavior, not the current state. The tests that check something is absent (`not storage_holds`, `404`s after expiry or deletion) each first exercise the positive case in the same test: the sample is present, or a `400` with the exact body is returned.
+- Preserved-behavior tests expected to pass at RED: none planned, and none passed.
+- Pre-authorized contingencies: none listed and none applied.
+- Deviations: one addition. The plan lists no compile command, so I added the `compileall` step above to satisfy the RED "compile everything" scope (`prompt-driven-development` Test Scope). It writes only gitignored `__pycache__`. The five planned commands ran as written and in order.
+- Processes: each voice-service process the tests started exited during start and was collected by the fixture's `kill()`/`wait()`. A process check afterwards found no process from this run still running. The `uvicorn.exe` on port 8000 is from an unrelated project (`v11\Traffic`) and was started before this run.
 
 ## Risks
 
