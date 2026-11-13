@@ -333,7 +333,7 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 | --- | --- | --- |
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
-| OAM-3 Voice service GREEN | Pending | — |
+| OAM-3 Voice service GREEN | Blocked — V3C-4 not met: 67 full-suite errors outside the accepted list (Docker engine not running) | `002_Implementation_Plan_OAM-3.md`; see OAM-3 stopped execution evidence below |
 | OAM-4 Inference service RED | Pending | — |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
@@ -367,6 +367,33 @@ Executed 2026-11-13 at HEAD `ff9d3ee`, Git Bash, from the repository root. Chang
 - Pre-authorized contingencies: none listed and none applied.
 - Deviations: one addition. The plan lists no compile command, so I added the `compileall` step above to satisfy the RED "compile everything" scope (`prompt-driven-development` Test Scope). It writes only gitignored `__pycache__`. The five planned commands ran as written and in order.
 - Processes: each voice-service process the tests started exited during start and was collected by the fixture's `kill()`/`wait()`. A process check afterwards found no process from this run still running. The `uvicorn.exe` on port 8000 is from an unrelated project (`v11\Traffic`) and was started before this run.
+
+### OAM-3 stopped execution evidence
+
+Executed 2026-11-13 at HEAD `8907c63`, which differs from the plan's `1d35815` only by the plan itself (`git diff --stat 1d35815 HEAD -- voice_narration .gitignore tests` printed nothing). Git Bash, from the repository root. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`), outside the repository.
+
+- Changes applied: `recordings.py` and `store.py` were created from the plan's code blocks (`002_Implementation_Plan_OAM-3.md` lines 150-211 and 217-304), and `cmp` showed them identical to the blocks. The `application.py` and `.gitignore` diffs (lines 310-506 and 517-524) were applied with `git apply` after `git apply --check`. The sorted `+`/`-` lines of `git diff` match the plan's diffs exactly (`cmp` printed nothing). V3C-1 holds.
+- Command 1: `compiled`.
+- Command 2: `11 passed in 14.11s` (V3C-2 met).
+- Command 3, no cleanup: `11 passed in 36.28s` (V3C-3 met).
+- Command 4a: `$TEMP/oam3-accepted.txt` written; `wc -l` gives `25`; `sort -c` reports it sorted.
+- Command 4b: `1 failed, 64 passed, 17 skipped, 43 warnings, 91 errors in 128.20s (0:02:08)`; interrupt count `0`.
+- Command 4c: the `unexpected:` list is not empty. It holds 67 node ids:
+  - `tests/test_persistence.py`: 33;
+  - `tests/test_authentication_consent.py`: 24;
+  - `tests/test_voice_enrollment.py`: 10. They are `test_all_pass_without_override_and_model_minimal_material_selection[materials0]`, `test_guidance_formats_playback_admission_and_originals`, `test_obsolete_assessment_rerecording_and_strict_override`, `test_readiness_gates_without_false_pass[changed_evaluator, changed_settings, missing_calibration, missing_policy, model, unavailable_evaluator]` and `test_warning_override_profile_reuse_and_minimal_materials`.
+  - The `accepted, not failing:` list is empty. Results of the accepted tests: `test_production_inference_module_missing` FAILED (`ImportError: cannot import name 'ProductionInferenceProvider'`, as on the baseline). The 24 accepted `test_voice_enrollment.py` ids are ERROR, each now at setup with the Docker cause below, not the baseline's `psycopg` timeouts. `[materials1]` appears once, as ERROR, not also FAILED.
+- Cause of every one of the 91 errors: a test fixture's `subprocess.CalledProcessError` from `docker compose -f compose.harness.yaml -p vnred… up --detach --wait --wait-timeout 120` and `… down --volumes --remove-orphans`. There were 91 of each, each `returned non-zero exit status 1`. `docker info` printed `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine … The system cannot find the file specified`, so the Docker engine was not running. None of the three files references `simple_voices` or `voice_storage` (`grep` found no match). The failures do not come from OAM-3's change, but V3C-4 counts any failure outside the accepted list. Under V3C-4 and V3R-9, execution stopped here, with no rerun, skip or repair.
+- Command 4d: `173 tests collected in 2.91s`, with no collection error.
+- Command 5: ` M audio_storage/generation_index.json`, `?? audio_storage/generations/2026-11-13/`.
+- Command 6: `git checkout -- audio_storage`. Then `git clean -fd -- audio_storage` printed `Removing audio_storage/archive/`, `Removing audio_storage/generations/2026-11-13/`, `Removing audio_storage/temp/`. Repeating command 5 printed nothing (V3C-5 met).
+- Command 7: `absent`; `.gitignore:11:/voice_storage/	voice_storage/voices.json` (V3C-6 met).
+- Command 8: `(*, root=None, clock=None) -> fastapi.applications.FastAPI`, then `<repository root>\voice_storage` (V3C-7 met). The return annotation is in the plan's code; the expected evidence omitted it.
+- Command 9: ` M .gitignore`, ` M voice_narration/simple_voices/application.py`, `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`, and `git diff --stat` reports `2 files changed, 77 insertions(+), 24 deletions(-)` for the tracked files. The applied OAM-3 changes are left in the working tree, uncommitted, for the user's decision.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: none in the commands. To apply the plan's code, each code block was extracted with `sed` line ranges into the scratchpad, then copied with `cp` and applied with `git apply`, as Execution Step 3 suggests.
+- Processes: the full suite ran as a background job, which exited. No container was started, because the engine was unreachable. Afterwards the only `python.exe` processes were PIDs 307936 and 307796, the unrelated `v11\Traffic` uvicorn. This run started no process that is still running.
+- Minimum revision to resume: no `Plan.md` scope change is indicated. Either the user starts the Docker engine and re-approves this same Implementation Plan for a fresh command-4 run, or a revised Implementation Plan changes the V3C-4 accepted-failure rule for review.
 
 ## Risks
 

@@ -14,16 +14,16 @@ GREEN
 - Requirements delivered: COA-2, COA-6 (sample storage format), COA-11, COA-12, COA-15, OAD-1; contract OAC-4 and OAC-10 as written in `API-Contract.md`.
 - Files: created `voice_narration/simple_voices/recordings.py`, `voice_narration/simple_voices/store.py`; modified `voice_narration/simple_voices/application.py`, `.gitignore`; deleted none.
 - Tests added: none. The 11 OAM-2 tests in `tests/test_voice_sample_persistence_red.py` go from failing to passing, unchanged.
-- Verification: `python -m pytest tests/test_voice_sample_persistence_red.py -q` twice, then `python -m pytest -q` once. Expected / Predicted — Not Yet Verified: `11 passed` twice. The full suite fails or errors only on the 25 accepted pre-existing tests listed under Accepted Pre-existing Failures (V3Q-1, answered (a)).
-- Needs attention: V3R-9. Most of the full suite has never been run to completion on the baseline. Under V3Q-1 (a), any failure outside the accepted list fails the milestone and stops execution, even if it turns out to be pre-existing. Also V3D-1 (the default storage folder `voice_storage/` plus a new `.gitignore` rule), V3D-6 (store and conversion run synchronously on the event loop), and V3R-1 (carried-over behavior has no tests).
-- Revision 2 (2026-11-13): records the user's answer to V3Q-1. It changes only the full-suite criterion, its verification and expected evidence, the Preconditions, the risks, and this summary. The proposed code is unchanged (see Revision Notes).
+- Verification: `python -m pytest tests/test_voice_sample_persistence_red.py -q` twice, then `python -m pytest -q` once, with the Docker engine not running (CON-2). Expected / Predicted — Not Yet Verified: `11 passed` twice. The full suite fails or errors only on the 92 accepted tests under Accepted Pre-existing Failures: the 25 from revision 2, plus 67 that error at setup because the Docker engine is unavailable (V3Q-2).
+- Needs attention: V3R-10 (the 91 Docker-dependent tests in three files give no signal at OAM-3). The new command 4a guard stops execution, without running the suite, if the Docker engine is reachable. Re-execution reuses the OAM-3 code already in the working tree after checking it matches this plan (Execution Steps 2–3). Also V3D-1, V3D-6 and V3R-1, unchanged.
+- Revision 3 (2026-11-13): records the user's answer V3Q-2 after execution stopped at V3C-4. It changes only the accepted list, V3C-4, command 4, the expected evidence, the execution steps for the applied code, the baseline, the risks, and this summary. The proposed code is unchanged (see Revision Notes).
 
 ## Authoritative References
 
 | Document | Status read |
 | --- | --- |
 | `docs/.ai/chatterbox-original-app/requirements.md` | Approved by Avinash Srivastava on 2026-11-13 (`requirements.md:17`) |
-| `docs/.ai/chatterbox-original-app/Plan.md` | Approved by Avinash Srivastava on 2026-11-13, as written (`Plan.md:5`) |
+| `docs/.ai/chatterbox-original-app/Plan.md` | Approved by Avinash Srivastava on 2026-11-13, as written (`Plan.md:5`). OAM-3 row reads Blocked, with the stopped-execution evidence at `Plan.md:371-396` (uncommitted working-tree change) |
 | `docs/.ai/chatterbox-original-app/API-Contract.md` (OAM-1 deliverable, authoritative predecessor) | Approved by Avinash Srivastava on 2026-11-13 (`API-Contract.md:527`); OAM-1 row Complete (`Plan.md:334`) |
 | `docs/.ai/chatterbox-original-app/001_Implementation_Plan_OAM-2.md` | Approved by Avinash Srivastava on 2026-11-13, executed (`001_Implementation_Plan_OAM-2.md:669`) |
 | Product-level `docs/requirements.md` | Does not exist (checked `docs/`) |
@@ -43,8 +43,15 @@ From `001_Implementation_Plan_OAM-2.md` (approved, decisions V2D-1 to V2D-6):
 
 - Plan Status records approval (`Plan.md:5`). OAM-3 is recorded as GREEN (`Plan.md:154`), with predecessor OAM-2 (`Plan.md:155`).
 - OAM-2 is `Complete — valid RED established 2026-11-13` (`Plan.md:335`). Its evidence (`Plan.md:343-369`): 11 failed in two runs, every failure from the absent `create_app(*, root, clock)` seam, no other cause, and `audio_storage` unchanged. As V2R-2 records, the behavior-level failures behind the seam were shown by the OAM-2 planning stub.
-- OAM-3 Execution Status is `Pending` (`Plan.md:336`). No other Implementation Plan exists for it, approved or stopped. Besides this plan, the folder holds only `requirements.md`, `Plan.md`, `API-Contract.md` and `001_Implementation_Plan_OAM-2.md`. This plan was drafted earlier the same day and stopped on V3Q-1. It has never been approved and has not been executed. This revision records the answer.
-- Repository state, inspected 2026-11-13: HEAD `1d35815`, branch `claude/chatterbox-original-app-client-a3ef0e`. When first drafted, `git status --short` printed nothing. At this revision it prints only `?? docs/.ai/chatterbox-original-app/002_Implementation_Plan_OAM-3.md`, which is this plan. Commit `1d35815` holds the OAM-2 test file and the OAM-2 evidence. The committed `tests/test_voice_sample_persistence_red.py` is identical to the OAM-2 plan's code block (`diff` of `001_Implementation_Plan_OAM-2.md:152-578` against the file printed nothing). No change is unrecorded.
+- OAM-3 Execution Status reads `Blocked — V3C-4 not met: 67 full-suite errors outside the accepted list (Docker engine not running)` (`Plan.md:336`). Revision 2 of this plan was approved and executed on 2026-11-13. Execution stopped at V3C-4 (`Plan.md:371-396`): V3C-1, V3C-2, V3C-3, V3C-5, V3C-6 and V3C-7 were met, and 67 Docker-setup errors fell outside the 25-id accepted list. The stopped evidence names the minimum revision: change the V3C-4 accepted-failure rule (`Plan.md:396`). No `Plan.md` scope change is needed, so this revision plans from the same approved Plan. No other Implementation Plan exists for OAM-3. The folder holds `requirements.md`, `Plan.md`, `API-Contract.md`, `001_Implementation_Plan_OAM-2.md` and this plan.
+- Repository state, inspected 2026-11-13 at this revision: HEAD `8907c63`, branch `claude/chatterbox-original-app-client-a3ef0e`. `git diff --stat 1d35815 HEAD` lists only this plan, so the diffs below, written against `1d35815`, apply to HEAD unchanged. `git status --short` prints:
+  - ` M .gitignore`;
+  - ` M docs/.ai/chatterbox-original-app/002_Implementation_Plan_OAM-3.md`;
+  - ` M docs/.ai/chatterbox-original-app/Plan.md`;
+  - ` M voice_narration/simple_voices/application.py`;
+  - `?? voice_narration/simple_voices/recordings.py`;
+  - `?? voice_narration/simple_voices/store.py`.
+- The four OAM-3 code files hold the stopped execution's changes, uncommitted. At this revision they match this plan's code exactly (Planning-Time Dry Run, revision 3 table): `cmp` shows the two new files identical to the code blocks. Each modified file is identical to HEAD with the plan's diff applied, once line endings are normalized. `git diff --stat -- tests` is empty.
 
 ## Current Repository State
 
@@ -542,23 +549,30 @@ Carried-over rules not covered by any test are kept by leaving their code unchan
 
 ## Execution Steps
 
-1. Confirm this plan's Human Review status records approval, and that `git status --short` prints nothing outside `docs/.ai/chatterbox-original-app/`.
-2. Create `voice_narration/simple_voices/recordings.py` and `voice_narration/simple_voices/store.py` with exactly the content above.
-3. Apply the `application.py` and `.gitignore` diffs, for example by saving each diff block to a file outside the repository and running `git apply <file>`. Then check the result with `git diff` against the diffs above.
-4. Run the commands under Verification in order, writing each log outside the repository.
+1. Confirm this plan's Human Review status records approval. Then confirm that `git status --short`, outside `docs/.ai/chatterbox-original-app/`, prints either nothing or exactly the four OAM-3 entries: ` M .gitignore`, ` M voice_narration/simple_voices/application.py`, `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`. Anything else: stop and report.
+2. If `git status` printed nothing outside the work-item folder, create `recordings.py` and `store.py` with exactly the content above, then apply the two diffs (for example, save each diff block to a file outside the repository, then run `git apply --check <file>` and `git apply <file>`).
+3. If the four OAM-3 entries are present (the state the stopped execution left), do not re-apply. Applying the diffs again would fail, because a forward `git apply --check` of the `application.py` diff reports `patch does not apply` on the changed file. Instead, check that the working tree equals this plan's code:
+   - extract the four code blocks from this plan to files outside the repository;
+   - `cmp` each new file against its block;
+   - `git apply -R --check` both diff files must succeed;
+   - the sorted `+`/`-` lines of `git diff -- voice_narration/simple_voices/application.py .gitignore` must equal the sorted `+`/`-` lines of the two diff blocks (`cmp` prints nothing). Exclude the `+++`/`---` header lines from both.
+
+   If every check passes, the existing changes count as this execution's applied changes (V3C-1). If any check fails, stop and report the difference. Do not edit the files to make them match.
+4. Run every command under Verification in order, writing each log outside the repository. The stopped execution's results (`Plan.md:371-396`) are not reused as evidence for any criterion. Command 4a must print `docker engine unreachable` before 4b–4e run. Do not start the Docker engine, Docker Desktop or any container (CON-2).
 5. Record the evidence in `Plan.md` Execution Status for OAM-3, and update this plan's Human Review status.
 
 ## Acceptance / Completion Criteria
 
-- **V3C-1** The repository changes are exactly: the two new files with the content above, and `application.py` and `.gitignore` changed exactly by the diffs above. No test file changes (`git diff --stat -- tests` is empty), and nothing else changes. This excludes the OAM-3 Execution Status update in `Plan.md` and this plan's Human Review status.
+- **V3C-1** The repository changes are exactly: the two new files with the content above, and `application.py` and `.gitignore` changed exactly by the diffs above. This holds whether execution applied them (Execution Step 2) or confirmed the changes already present (Execution Step 3). No test file changes (`git diff --stat -- tests` is empty), and nothing else changes. This excludes the OAM-3 Execution Status updates and stopped-execution evidence in `Plan.md`, and this plan's own revisions and Human Review status.
 - **V3C-2** `python -m pytest tests/test_voice_sample_persistence_red.py -q` reports `11 passed`, with 0 failed and 0 errors.
 - **V3C-3** A second run of the same file, with no cleanup between runs, reports `11 passed` (Repeatable, Isolated Verification).
-- **V3C-4** The full backend suite runs once (V3Q-1, answered (a)), and all of the following hold:
+- **V3C-4** The full backend suite runs once (V3Q-1 (a) and V3Q-2), and all of the following hold:
+  - just before the run, the Docker engine is unreachable (command 4a prints `docker engine unreachable`), so the suite starts no container (CON-2). If the engine is reachable, the suite is not run: execution stops and reports it;
   - it collects 173 tests with no collection error;
   - the log ends with pytest's final summary line, so the run completed and was not interrupted;
-  - every test reported `FAILED` or `ERROR` is one of the 25 node ids under Accepted Pre-existing Failures. Verification command 4 checks this mechanically: its "unexpected" list must be empty.
+  - every test reported `FAILED` or `ERROR` is one of the 92 node ids under Accepted Pre-existing Failures. Verification command 4d checks this mechanically: its "unexpected" list must be empty.
 
-  Each accepted test's result is recorded in the evidence. An accepted test that now passes, or fails at a different phase, is recorded and does not fail the milestone. Any other failure or error, including one that may be pre-existing, fails the milestone. Execution then stops and reports it. It does not rerun, skip or repair the test.
+  Each accepted test's result is recorded in the evidence. An accepted test that now passes, or fails at a different phase or for a different cause, is recorded and does not fail the milestone. Any other failure or error, including one that may be pre-existing, fails the milestone. Execution then stops and reports it. It does not rerun, skip or repair the test.
 - **V3C-5** After every test run, `git status --short -- audio_storage` prints nothing, or is restored by OAV-3 (Verification command 6), with what it printed recorded (OAS-1).
 - **V3C-6** No `voice_storage/` folder exists in the repository after the runs, because the tests write only under `tmp_path`. `git check-ignore -v voice_storage/voices.json` names the `.gitignore` rule `/voice_storage/`.
 - **V3C-7** `create_app` keeps its no-argument call working: its signature is `(*, root=None, clock=None)`, and `DEFAULT_ROOT` is `<repository root>/voice_storage`.
@@ -572,11 +586,12 @@ Run from the repository root in Git Bash. `$TEMP` is outside the repository.
 1. `python -m compileall -q voice_narration/simple_voices && echo compiled`
 2. `python -m pytest tests/test_voice_sample_persistence_red.py -q > "$TEMP/oam3-green-run1.log" 2>&1; tail -1 "$TEMP/oam3-green-run1.log"` (OAV-1)
 3. `python -m pytest tests/test_voice_sample_persistence_red.py -q > "$TEMP/oam3-green-run2.log" 2>&1; tail -1 "$TEMP/oam3-green-run2.log"` (second run, no cleanup)
-4. Full suite and the V3Q-1 check (OAV-2, run in the background with a completion notice):
-   - 4a. Write the accepted list to `$TEMP/oam3-accepted.txt`, exactly the content of the block under Accepted Pre-existing Failures, with a heredoc: `cat > "$TEMP/oam3-accepted.txt" <<'EOF'`, then the 25 lines, then `EOF`.
-   - 4b. `python -m pytest -q > "$TEMP/oam3-full.log" 2>&1; tail -1 "$TEMP/oam3-full.log"; grep -cE "^!+ (Interrupted|KeyboardInterrupt)" "$TEMP/oam3-full.log"`. A count of `0` means the run was not interrupted. A collection error appears as an `ERROR tests/<file>.py` line, and 4c reports it as unexpected.
-   - 4c. `grep -E "^(FAILED|ERROR) " "$TEMP/oam3-full.log" | sed -E 's/^(FAILED|ERROR) //; s/ - .*$//' | LC_ALL=C sort -u > "$TEMP/oam3-failing.txt"; echo "unexpected:"; LC_ALL=C comm -23 "$TEMP/oam3-failing.txt" "$TEMP/oam3-accepted.txt"; echo "accepted, not failing:"; LC_ALL=C comm -13 "$TEMP/oam3-failing.txt" "$TEMP/oam3-accepted.txt"; grep -E "^(FAILED|ERROR) " "$TEMP/oam3-full.log"`
-   - 4d. `python -m pytest --collect-only -q -p no:cacheprovider > "$TEMP/oam3-collect.log" 2>&1; tail -1 "$TEMP/oam3-collect.log"`
+4. Full suite and the V3Q-1/V3Q-2 check (OAV-2, run in the background with a completion notice). Revision 3 inserts 4a, so revision 2's 4a–4d, as cited in `Plan.md:379-387`, are now 4b–4e. Each log name is new to revision 3, so the stopped run's `$TEMP/oam3-*` files are not overwritten or reused:
+   - 4a. Docker guard (CON-2, V3Q-2): `if docker info >/dev/null 2>&1; then echo "docker engine reachable"; else echo "docker engine unreachable"; fi`. This only queries the engine and does not start it. If it prints `docker engine reachable`, stop: do not run 4b–4e, and report it.
+   - 4b. Write the accepted list to `$TEMP/oam3r3-accepted.txt`, exactly the content of the block under Accepted Pre-existing Failures, with a heredoc: `cat > "$TEMP/oam3r3-accepted.txt" <<'EOF'`, then the 92 lines, then `EOF`. Then check it: `wc -l < "$TEMP/oam3r3-accepted.txt"` prints `92`, and `LC_ALL=C sort -c "$TEMP/oam3r3-accepted.txt"` prints nothing.
+   - 4c. `python -m pytest -q > "$TEMP/oam3r3-full.log" 2>&1; tail -1 "$TEMP/oam3r3-full.log"; grep -cE "^!+ (Interrupted|KeyboardInterrupt)" "$TEMP/oam3r3-full.log"`. A count of `0` means the run was not interrupted. A collection error appears as an `ERROR tests/<file>.py` line, and 4d reports it as unexpected.
+   - 4d. `grep -E "^(FAILED|ERROR) " "$TEMP/oam3r3-full.log" | sed -E 's/^(FAILED|ERROR) //; s/ - .*$//' | LC_ALL=C sort -u > "$TEMP/oam3r3-failing.txt"; echo "unexpected:"; LC_ALL=C comm -23 "$TEMP/oam3r3-failing.txt" "$TEMP/oam3r3-accepted.txt"; echo "accepted, not failing:"; LC_ALL=C comm -13 "$TEMP/oam3r3-failing.txt" "$TEMP/oam3r3-accepted.txt"; grep -E "^(FAILED|ERROR) " "$TEMP/oam3r3-full.log"`
+   - 4e. `python -m pytest --collect-only -q -p no:cacheprovider > "$TEMP/oam3r3-collect.log" 2>&1; tail -1 "$TEMP/oam3r3-collect.log"`
 5. `git status --short -- audio_storage` (OAV-3)
 6. Only if command 5 printed anything: record its output, then run `git checkout -- audio_storage` and `git clean -fd -- audio_storage`, then repeat command 5, which must print nothing (OAV-3, `Plan.md:323`)
 7. `test ! -e voice_storage && echo absent; git check-ignore -v voice_storage/voices.json`
@@ -595,16 +610,17 @@ Expected / Predicted — Not Yet Verified:
 - Command 1: `compiled`.
 - Commands 2 and 3: `11 passed` each.
 - Command 4:
-  - 4b's last line is pytest's final summary line, and its grep count is `0`.
-  - 4c prints an empty `unexpected:` list. Its `accepted, not failing:` list is predicted empty, but any tests in it are recorded, not treated as a failure.
-  - 4c's `FAILED`/`ERROR` lines are recorded as the accepted tests' results: predicted to be 3 `FAILED` and 23 `ERROR` lines, with `[materials1]` appearing in both.
-  - 4d prints `173 tests collected`.
-  - The run is predicted to take more than 30 minutes, based on the baseline timings below.
-  - These predictions rest on a baseline that was not run to completion (V3R-9).
+  - 4a prints `docker engine unreachable`.
+  - 4b: `92`, and `sort -c` prints nothing.
+  - 4c's last line is pytest's final summary line, predicted to be `1 failed, 64 passed, 17 skipped, … 91 errors`. Its grep count is `0`. The run is predicted to take about 2–3 minutes, since the stopped run took `128.20s`.
+  - 4d prints an empty `unexpected:` list. Its `accepted, not failing:` list is predicted empty, but any tests in it are recorded, not treated as a failure.
+  - 4d's `FAILED`/`ERROR` lines are recorded as the accepted tests' results. Predicted: 1 `FAILED` (`test_production_inference_module_missing`, `ImportError`), and 91 `ERROR` at setup from `docker compose … up` raising `CalledProcessError`.
+  - 4e prints `173 tests collected`.
+  - These predictions rest on the stopped run and the revision 3 baseline below.
 - Commands 5–6: command 5 may print the `audio_storage/` changes written by `tests/test_generation_history_download.py` (Plan OAR-1). After command 6, it prints nothing.
 - Command 7: `absent`, and `.gitignore:11:/voice_storage/	voice_storage/voices.json`.
-- Command 8: `(*, root=None, clock=None)`, and a path ending in `voice_storage` directly under the repository root.
-- Command 9: `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`, ` M voice_narration/simple_voices/application.py` and ` M .gitignore`, plus work-item changes under `docs/.ai/chatterbox-original-app/`.
+- Command 8: `(*, root=None, clock=None) -> fastapi.applications.FastAPI`, and a path ending in `voice_storage` directly under the repository root. The return annotation is in the proposed code, and revision 2's expected evidence left it out (`Plan.md:391`).
+- Command 9: `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`, ` M voice_narration/simple_voices/application.py` and ` M .gitignore`, plus work-item changes under `docs/.ai/chatterbox-original-app/` (` M Plan.md` and this plan). `git diff --stat` reports `77 insertions(+), 24 deletions(-)` for `application.py` and `.gitignore` together, as in the stopped run.
 
 ### Baseline Pre-existing Failures
 
@@ -637,18 +653,88 @@ This section is added because `implementation-planning` Pre-existing Failures re
 
 The two files' results match the user-named pre-existing failures in kind (`Plan.md:35`). The full suite took more than 20 minutes without those two files, so command 4 runs in the background. A process from the enrollment run, a `multiprocessing` child spawned at 10:56 whose parent had exited, was still running afterwards. It was stopped (PID 148544).
 
-### Accepted Pre-existing Failures (V3Q-1, answered (a))
+Revision 3 baseline, with the Docker engine not running. It was observed once, on 2026-11-13, in a disposable copy of HEAD `8907c63` without the OAM-3 code (`scratchpad/rev3/base`, created with `git -c core.autocrlf=false archive HEAD | tar -x`). It is not milestone evidence.
 
-These are exactly the tests that failed or errored in the baseline runs above. Together they make 26 baseline entries under 25 node ids: `[materials1]` both failed and errored. Each id was re-confirmed at this revision with `PYTHONDONTWRITEBYTECODE=1 python -m pytest tests/test_voice_enrollment.py tests/test_real_model_inference.py --collect-only -q -p no:cacheprovider` at HEAD `1d35815` (`45 tests collected`; all 25 ids present). The list is sorted with `LC_ALL=C sort` (checked with `sort -c`), as command 4c's `comm` requires. Command 4a writes it to `$TEMP/oam3-accepted.txt` exactly as shown:
+| Command (in the unmodified copy) | Result |
+| --- | --- |
+| `docker info --format '{{.ServerVersion}}'` (before and after) | `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine … The system cannot find the file specified.` |
+| `PYTHONDONTWRITEBYTECODE=1 timeout 900 python -m pytest tests/test_persistence.py tests/test_authentication_consent.py tests/test_voice_enrollment.py -q -p no:cacheprovider` (guarded: aborts if `docker info` succeeds) | `91 errors in 96.38s (0:01:36)`. No test passed or failed. Each error is at setup: `subprocess.CalledProcessError: Command '['docker', 'compose', '-f', 'compose.harness.yaml', '-p', 'vnred…', 'up', '--detach', '--wait', '--wait-timeout', …` |
+| `comm` of the 91 erroring ids against the accepted list below, without the `test_real_model_inference.py` id | identical |
+
+So the 91 Docker-dependent tests error the same way without OAM-3's code. Their errors are pre-existing in this environment, and OAM-3 does not cause them. With Docker unavailable, the 24 revision-2 `test_voice_enrollment.py` ids also error at setup now, not with the `psycopg` timeouts seen earlier. The Docker Desktop front-end processes seen running (started 10:39–10:40, before this check) were not started by planning, and the engine stayed unreachable throughout.
+
+### Accepted Pre-existing Failures (V3Q-1 (a), extended by V3Q-2)
+
+The 92 node ids below are the 25 revision-2 ids, plus the 67 ids that errored at setup in the stopped execution because the Docker engine was unavailable: 24 in `tests/test_authentication_consent.py`, 33 in `tests/test_persistence.py` and 10 in `tests/test_voice_enrollment.py`. The 67 came from `$TEMP/oam3-unexpected.txt`, taken from `$TEMP/oam3-full.log`. The two sets do not overlap (`comm -12` printed nothing). The merged list equals the stopped run's full set of `FAILED`/`ERROR` ids, `$TEMP/oam3-failing.txt` (`cmp` printed nothing). It is sorted with `LC_ALL=C sort` (checked with `sort -c`), as command 4d's `comm` requires. Command 4b writes it to `$TEMP/oam3r3-accepted.txt` exactly as shown:
 
 ```text
+tests/test_authentication_consent.py::test_configured_token_boundaries_and_authenticated_principal
+tests/test_authentication_consent.py::test_consent_immutable_legal_provenance_and_owner_gate
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change0]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change1]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change2]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change3]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change4]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change5]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change6]
+tests/test_authentication_consent.py::test_explicit_assisted_authority_and_closed_consent_validation[change7]
+tests/test_authentication_consent.py::test_live_scoped_grant_on_new_consent_boundary
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change0]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change10]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change1]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change2]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change3]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change4]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change5]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change6]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change7]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change8]
+tests/test_authentication_consent.py::test_registration_closed_validation_after_working_positive[change9]
+tests/test_authentication_consent.py::test_registration_verification_login_and_duplicate_identity
+tests/test_authentication_consent.py::test_separate_administrator_and_user_roles
+tests/test_persistence.py::test_audit_metadata_has_independent_bounded_retention
+tests/test_persistence.py::test_cleanup_failure_never_restores_access_or_moves_deadline
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-ai]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-artifacts]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-consent]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-jobs]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-voices]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-ai]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-artifacts]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-consent]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-jobs]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-voices]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-ai]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-artifacts]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-consent]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-jobs]
+tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-voices]
+tests/test_persistence.py::test_live_scoped_admin_grants[artifacts-audio:read-generated]
+tests/test_persistence.py::test_live_scoped_admin_grants[artifacts-samples:read-sample]
+tests/test_persistence.py::test_live_scoped_admin_grants[consent-consents:read-consent]
+tests/test_persistence.py::test_live_scoped_admin_grants[jobs-jobs:read-job]
+tests/test_persistence.py::test_live_scoped_admin_grants[voices-profiles:read-profile]
+tests/test_persistence.py::test_owner_isolation_survives_reopen[ai]
+tests/test_persistence.py::test_owner_isolation_survives_reopen[artifacts]
+tests/test_persistence.py::test_owner_isolation_survives_reopen[consent]
+tests/test_persistence.py::test_owner_isolation_survives_reopen[jobs]
+tests/test_persistence.py::test_owner_isolation_survives_reopen[voices]
+tests/test_persistence.py::test_retention_defaults_required_values_and_audit
+tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-generated-30]
+tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-joined_preview-30]
+tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-sample-3]
+tests/test_persistence.py::test_retention_expiry_and_shortening[consent-consent-9]
+tests/test_persistence.py::test_retention_expiry_and_shortening[voices-profile-8]
 tests/test_real_model_inference.py::TestRealModelInferenceRED::test_production_inference_module_missing
+tests/test_voice_enrollment.py::test_all_pass_without_override_and_model_minimal_material_selection[materials0]
 tests/test_voice_enrollment.py::test_all_pass_without_override_and_model_minimal_material_selection[materials1]
 tests/test_voice_enrollment.py::test_all_pass_without_override_and_model_minimal_material_selection[materials2]
 tests/test_voice_enrollment.py::test_catalog_order_limits_and_authenticated_snapshot
 tests/test_voice_enrollment.py::test_evaluator_execution_failure_cannot_be_overridden
+tests/test_voice_enrollment.py::test_guidance_formats_playback_admission_and_originals
 tests/test_voice_enrollment.py::test_multistream_metadata_playback_and_conditioning
 tests/test_voice_enrollment.py::test_nondefault_pagination_controls_both_handlers
+tests/test_voice_enrollment.py::test_obsolete_assessment_rerecording_and_strict_override
 tests/test_voice_enrollment.py::test_ownership_reference_validation_and_live_consent_fence
 tests/test_voice_enrollment.py::test_pagination_configuration_fails_closed[pagination0]
 tests/test_voice_enrollment.py::test_pagination_configuration_fails_closed[pagination1]
@@ -657,6 +743,12 @@ tests/test_voice_enrollment.py::test_pagination_configuration_fails_closed[pagin
 tests/test_voice_enrollment.py::test_pagination_configuration_fails_closed[pagination4]
 tests/test_voice_enrollment.py::test_pagination_configuration_fails_closed[pagination5]
 tests/test_voice_enrollment.py::test_profile_limits_filters_and_stable_snapshot
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[changed_evaluator]
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[changed_settings]
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[missing_calibration]
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[missing_policy]
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[model]
+tests/test_voice_enrollment.py::test_readiness_gates_without_false_pass[unavailable_evaluator]
 tests/test_voice_enrollment.py::test_selected_model_bounds_guidance_and_independent_reuse
 tests/test_voice_enrollment.py::test_unknown_parts_and_unready_models_discard_streams
 tests/test_voice_enrollment.py::test_upload_model_parts_closed[blank-model_id]
@@ -667,11 +759,12 @@ tests/test_voice_enrollment.py::test_upload_model_parts_closed[malformed-model_i
 tests/test_voice_enrollment.py::test_upload_model_parts_closed[malformed-model_version]
 tests/test_voice_enrollment.py::test_upload_model_parts_closed[missing-model_id]
 tests/test_voice_enrollment.py::test_upload_model_parts_closed[missing-model_version]
+tests/test_voice_enrollment.py::test_warning_override_profile_reuse_and_minimal_materials
 ```
 
-`test_all_pass_without_override_and_model_minimal_material_selection[materials0]` is not on the list: it passed on the baseline.
+With this list, every test in `tests/test_persistence.py`, `tests/test_authentication_consent.py` and `tests/test_voice_enrollment.py` is accepted. That is all 91 collected tests in those files (revision 3 baseline). `[materials0]`, which passed on the revision-2 baseline, is now included because it errored at setup in the stopped run.
 
-The user's answer says "failing tests". The plan's option (a), which the user chose, covers "exactly the failing and erroring tests listed under Baseline Pre-existing Failures". So the 23 erroring tests are included. A reviewer who reads the answer as excluding them should say so before approval.
+Revision 2 note, kept: the user's V3Q-1 answer says "failing tests". The plan's option (a), which the user chose, covers "exactly the failing and erroring tests listed under Baseline Pre-existing Failures", so erroring tests are included. V3Q-2 accepts the 67 Docker-setup errors explicitly.
 
 ### Planning-Time Dry Run
 
@@ -689,7 +782,7 @@ This is a planning-time dry run, not milestone evidence. It ran on 2026-11-13 in
 | No-argument start from the launcher's directory | from `voice_narration/`: `PYTHONPATH=.. python -c "from fastapi.testclient import TestClient; from voice_narration.simple_voices.application import create_app, DEFAULT_ROOT; print(DEFAULT_ROOT); c = TestClient(create_app()); print(c.get('/health').json(), len(c.get('/voices').json()['data']))"` (run as a multi-line `-c` program with `with TestClient(...)`) | `DEFAULT_ROOT` = `<copy>/voice_storage`; `/health` returned `{'status': 'ok', 'service': 'voice-management'}`; 5 voices listed. The folder it created was deleted |
 | Library behavior (V3D-4, V3D-5) | probe script `probe/avprobe.py` | `is_webm` was `True` for `chrome_recording()` and `unconvertible_webm()` and `False` for a Matroska/Opus file. The fixture raised `av.error.EOFError` (an `FFmpegError`), a video-only WebM raised `IndexError`, and `AudioResampler.resample(None)` on a fresh resampler returned `[]` |
 
-Revision 2 checks, run on 2026-11-13 for the V3Q-1 change only. The proposed code is unchanged, so the code checks above were not rerun.
+Revision 2 checks, run on 2026-11-13 for the V3Q-1 change only. Command numbers in this table are revision 2's (its 4b and 4c are now 4c and 4d). The proposed code is unchanged, so the code checks above were not rerun.
 
 | Step | Command | Result |
 | --- | --- | --- |
@@ -698,6 +791,24 @@ Revision 2 checks, run on 2026-11-13 for the V3Q-1 change only. The proposed cod
 | Accepted list sorted | `LC_ALL=C sort -c` on the list; `wc -l` | sorted; `25` |
 | Command 4c logic | 4c's pipeline, run in the scratchpad on two synthetic logs: one with exactly the baseline's 3 `FAILED` and 23 `ERROR` lines, one that adds `FAILED tests/test_inference.py::test_new - …` | first log: `unexpected:` empty, `accepted, not failing:` empty; second log: `unexpected:` lists only `tests/test_inference.py::test_new` |
 | Command 4b interrupt check | a scratchpad suite with an import-error test file, then without it | the run with the import error: count `1`, and the line `ERROR tests/test_bad.py`, which 4c would report as unexpected; the run without it: count `0` |
+
+Revision 3 checks, run on 2026-11-13 for the V3Q-2 change and the applied working-tree code. The proposed code is unchanged, so the code checks in the first table were not rerun. `S` is `scratchpad/rev3`.
+
+| Step | Command | Result |
+| --- | --- | --- |
+| Repository state | `git rev-parse --short HEAD; git status --short; git diff --stat 1d35815 HEAD` | `8907c63`; the six entries listed under Preconditions; only this plan differs between `1d35815` and HEAD |
+| New files equal the plan | `sed -n` extraction of the `recordings.py` and `store.py` blocks to `$S`, then `cmp` against the working-tree files | identical, both |
+| Modified files equal the plan | `git apply -R --check $S/app.diff $S/gi.diff`; sorted `+`/`-` lines of `git diff -- application.py .gitignore` against the diff blocks', compared with `cmp` | reverse check passed; `cmp` printed nothing |
+| Modified files equal the plan, whole file | in a copy of HEAD (`git archive`), `git apply $S/app.diff $S/gi.diff`, then `cmp <(tr -d '\r' < <file>) <(tr -d '\r' < <copy file>)` for each | identical, both. A raw `git hash-object` comparison differed only by line endings, because the worktree and the archive copy both hold CRLF |
+| Re-applying would fail | `git apply --check $S/app.diff` on the working tree | `error: patch failed: voice_narration/simple_voices/application.py:1` (why Execution Step 3 does not re-apply) |
+| Tests unchanged | `git diff --stat -- tests` | empty |
+| Docker guard (command 4a) | `if docker info >/dev/null 2>&1; then echo "docker engine reachable"; else echo "docker engine unreachable"; fi` | `docker engine unreachable` |
+| Baseline of the three Docker-dependent files | see the revision 3 baseline under Baseline Pre-existing Failures | `91 errors in 96.38s`, all at `docker compose … up` setup |
+| Accepted list | `LC_ALL=C sort -u $TEMP/oam3-accepted.txt $TEMP/oam3-unexpected.txt`; `wc -l`; `sort -c`; `comm -12` of the two inputs; `cmp` against `$TEMP/oam3-failing.txt` | `92`; sorted; no overlap; equal to the stopped run's failing set. The plan's block was regenerated from this file, and an `awk` extraction of the block compared equal with `cmp` |
+| Command 4d logic | 4d's pipeline on the stopped run's `$TEMP/oam3-full.log` with the 92-id list; then with an extra id `tests/test_inference.py::test_new` | first: `unexpected:` empty, `accepted, not failing:` empty; second: `unexpected:` lists only `tests/test_inference.py::test_new` |
+| Processes | `ps -W` and `Get-CimInstance Win32_Process` for python | only the unrelated `v11\Traffic` uvicorn (PIDs 184916, 157064); nothing from this run was still running |
+
+Revision 3 created `scratchpad/rev3/` holding the extracted blocks, `app.diff`, `gi.diff`, `base/` (the HEAD copy), `baseline3.log`, `base-failing.txt`, `accepted92.txt` and the helper `fix.py`, which regenerated the list block. All were deleted after the plan was written. The stopped run's `$TEMP/oam3-*` files were only read.
 
 An earlier draft of the code also passed 11 tests (`11 passed in 85.63s`). It differed only in handling `ConversionError` inside the `if` block and in `VoiceStore.sample` not checking the id. The final code above is what the table records.
 
@@ -712,8 +823,9 @@ Created during planning, all under the scratchpad folder: `oam3/` and `baseline/
 - **V3R-5 Port race in the real-transport tests** (V2R-1). If another process takes the freed port, the service exits during start. That is an environment failure: execution stops and reports it, with no rerun until it passes.
 - **V3R-6 Identity comparisons (security).** None. No voice-service operation authenticates a caller or compares an identity, role or owner (`API-Contract.md:58`). Voice ids are compared exactly, as before. The only identifier that reaches the file system is a service-assigned id already in the index (V3D-2).
 - **V3R-7 `av` becomes a runtime import of the voice service.** It is already pinned (`requirements-dev.txt:11`), and no version changes. A Python environment without it would fail when the service starts. The launchers use the same environment as the tests (`start-voice-service.bat:25`).
-- **V3R-8 The full suite is long, and it can leave processes behind.** On the baseline, `tests/test_voice_enrollment.py` alone took 608 s, and the rest had not finished after 1200 s. One `multiprocessing` child of the enrollment run outlived its parent. After command 4, execution lists the processes it started and stops any that are left, as `prompt-driven-development` Plan Progress requires.
-- **V3R-9 Most of the full suite has an unknown baseline** (V3Q-1 (a)). Outside the two named files, only 28 tests were seen passing before the 1200 s cut-off, and which tests had not yet run is unknown (Baseline Pre-existing Failures). Any other failure or error at command 4, whether OAM-3 caused it or it was already there, fails V3C-4. Execution then stops and reports it for the user. It does not classify it as pre-existing, rerun it, or add it to the accepted list. Separately, the enrollment tests' results may depend on database timeouts in this environment. This is the hypothesis noted above, not established. If one of them now passes, it is recorded, not treated as a failure (V3C-4).
+- **V3R-8 The full suite can leave processes behind.** On the revision-2 baseline, with Docker reachable, `tests/test_voice_enrollment.py` took 608 s, and one `multiprocessing` child outlived its parent. With the engine unreachable, the stopped run took 128 s and left nothing running (`Plan.md:395`). After command 4, execution lists the processes it started and stops any that are left, as `prompt-driven-development` Plan Progress requires.
+- **V3R-9 Only the stopped run establishes the rest of the suite's results.** Outside the 92 accepted ids, the stopped run reported 64 passed and 17 skipped with the OAM-3 code applied (`Plan.md:380`). Those 81 tests were not run separately on the unmodified repository. Any failure or error outside the accepted list at command 4, whether OAM-3 caused it or it was already there, fails V3C-4. Execution then stops and reports it for the user. It does not classify it as pre-existing, rerun it, or add it to the accepted list.
+- **V3R-10 The 91 Docker-dependent tests give no signal at OAM-3** (V3Q-2). All of `tests/test_persistence.py`, `tests/test_authentication_consent.py` and `tests/test_voice_enrollment.py` error at fixture setup without the Docker engine (revision 3 baseline). So a regression in what those files cover would not show at OAM-3. Mitigation within scope: none of the three files references `simple_voices` or `voice_storage` (`Plan.md:386`), and OAM-3 changes nothing outside `voice_narration/simple_voices/` and `.gitignore` (V3C-1). Running them would need the Docker engine, which CON-2 excludes. If the engine is reachable at execution, command 4a stops the run before any container starts.
 
 ## Pre-authorized Contingencies
 
@@ -742,8 +854,29 @@ This section is added because the Plan leaves this decision to each Implementati
   - (b) Accept any failure or error inside `tests/test_voice_enrollment.py` and `tests/test_real_model_inference.py`, recorded by name. Every test in the other files must pass.
   - (c) Run command 4 with `--ignore=tests/test_voice_enrollment.py --ignore=tests/test_real_model_inference.py`, and require every remaining test to pass. Those two files are then not run at OAM-3.
   - (d) Another rule you state.
+- **V3Q-2 After execution stopped at V3C-4 on 67 Docker-setup errors (`Plan.md:379-396`), how does V3C-4 treat them?** Answered by the user (Avinash Srivastava) on 2026-11-13 (create-implementation-plan arguments): "Revise accepted list". Keep CON-2 (no local Docker container) and do not start Docker. Revise V3C-4 so the accepted pre-existing failures are the existing 25 named tests plus the 67 tests that errored at setup because the Docker engine is unavailable, with every accepted test listed by full name. Any other failure still fails the milestone, and the approved code stays unchanged. Applied in V3C-4, Verification command 4 (the 4a guard and the 92-id list), Expected Evidence, Accepted Pre-existing Failures, Execution Steps 1–4 and V3R-10.
 
 ## Revision Notes
+
+Revision 3, 2026-11-13. It records V3Q-2 after execution of revision 2 stopped at V3C-4. Changed:
+
+- the Review Summary;
+- the Plan.md row in Authoritative References;
+- Preconditions: the stopped execution, HEAD `8907c63`, and the applied working-tree code;
+- Execution Steps 1–4: accept the already-applied code after an exact check, rerun every verification command, never start Docker;
+- V3C-1: wording only, to cover changes already present, with the `Plan.md` stopped-execution evidence excluded;
+- V3C-4: the Docker-unreachable condition, and 92 accepted ids;
+- Verification command 4: a new guard 4a, so revision 2's 4a–4d are now 4b–4e. The log files are renamed to `$TEMP/oam3r3-*`;
+- Expected Evidence for commands 4, 8 (adds the return annotation the stopped run observed) and 9;
+- a revision 3 baseline;
+- the Accepted Pre-existing Failures list and its notes;
+- the revision 3 dry-run table;
+- V3R-8 and V3R-9 updated, and a new risk, V3R-10;
+- V3Q-2 added to Answered Questions.
+
+Unchanged: every Proposed Change, all proposed code and diffs, V3C-2, V3C-3, V3C-5 to V3C-7, decisions V3D-1 to V3D-8, Rollback / Recovery and Explicitly Out of Scope.
+
+Revision 2, 2026-11-13. It records V3Q-1's answer (a). Changed:
 
 Revision 2, 2026-11-13. It records V3Q-1's answer (a). Changed:
 
@@ -761,4 +894,4 @@ Unchanged: every Proposed Change, all proposed code and diffs, V3C-1 to V3C-3 an
 
 ## Human Review
 
-Status: Approved by Avinash Srivastava on 2026-11-13, as written, including V3Q-1 option (a) with the 25-test accepted list (failing and erroring tests).
+Status: Revision 3 approved by Avinash Srivastava on 2026-11-13, as written. Execution of revision 2 stopped at a blocker (V3C-4, see `Plan.md` OAM-3 stopped execution evidence).
