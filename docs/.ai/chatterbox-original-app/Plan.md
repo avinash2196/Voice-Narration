@@ -333,7 +333,7 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 | --- | --- | --- |
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
-| OAM-3 Voice service GREEN | Blocked — V3C-4 not met: 67 full-suite errors outside the accepted list (Docker engine not running) | `002_Implementation_Plan_OAM-3.md`; see OAM-3 stopped execution evidence below |
+| OAM-3 Voice service GREEN | Waiting — Docker engine stopped (command 4a must print `docker engine unreachable`) from user | `002_Implementation_Plan_OAM-3.md` revision 3; see OAM-3 stopped execution evidence and OAM-3 revision 3 execution evidence below |
 | OAM-4 Inference service RED | Pending | — |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
@@ -394,6 +394,22 @@ Executed 2026-11-13 at HEAD `8907c63`, which differs from the plan's `1d35815` o
 - Deviations: none in the commands. To apply the plan's code, each code block was extracted with `sed` line ranges into the scratchpad, then copied with `cp` and applied with `git apply`, as Execution Step 3 suggests.
 - Processes: the full suite ran as a background job, which exited. No container was started, because the engine was unreachable. Afterwards the only `python.exe` processes were PIDs 307936 and 307796, the unrelated `v11\Traffic` uvicorn. This run started no process that is still running.
 - Minimum revision to resume: no `Plan.md` scope change is indicated. Either the user starts the Docker engine and re-approves this same Implementation Plan for a fresh command-4 run, or a revised Implementation Plan changes the V3C-4 accepted-failure rule for review.
+
+### OAM-3 revision 3 execution evidence
+
+Executed 2026-11-13 at HEAD `5ac5177`, Git Bash, from the repository root. Logs are in `$TEMP`, outside the repository. Stopped at command 4a, as the plan directs (V3C-4, Verification command 4a). The full suite was not run.
+
+- Execution Step 1: the Human Review status reads "Revision 3 approved by Avinash Srivastava on 2026-11-13, as written". `git status --short` printed exactly ` M .gitignore`, ` M voice_narration/simple_voices/application.py`, `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`.
+- Execution Step 3 (code already present, not re-applied): the four code blocks were extracted with `sed -n` (plan lines 157-218, 224-311, 317-513, 524-531) to the scratchpad. `cmp` showed both new files identical to their blocks, raw and with CR removed. `git apply -R --check` of both diffs succeeded. The sorted `+`/`-` lines of `git diff -- voice_narration/simple_voices/application.py .gitignore` equal those of the diff blocks (`cmp` printed nothing). `git diff --stat -- tests` was empty. V3C-1 holds.
+- Command 1: `compiled`.
+- Command 2: `11 passed in 20.96s` (V3C-2 met).
+- Command 3, no cleanup: `11 passed in 15.15s` (V3C-3 met).
+- Command 4a: `docker engine reachable`. `docker info --format '{{.ServerVersion}} {{.OperatingSystem}}'` printed `29.3.1 Docker Desktop`, and `docker ps` listed no container. This run did not start the engine. Under V3C-4 the suite is not run when the engine is reachable, so commands 4c–4e were not run. V3C-4 is not verified.
+- Read-only state checks after the stop: `git status --short -- audio_storage` printed nothing (V3C-5 holds for commands 2–3). `test ! -e voice_storage && echo absent` printed `absent`. `git status --short` printed the same four entries. Commands 5–9 were not run as milestone evidence.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: command 4b (writing the accepted list) ran in the same shell invocation as 4a, before 4a's output was read. The plan says not to run 4b when 4a prints `reachable`. It only wrote `$TEMP/oam3r3-accepted.txt`, outside the repository (`wc -l` `92`, `sort -c` silent), and no test ran. The list was also extracted from plan lines 671-762 with `sed -n`, not with a heredoc. The content is the same block.
+- Processes: no `python.exe` process was running afterwards, and no container was running. This run started no process that is still running.
+- To resume, on this same approved Implementation Plan: the user stops the Docker engine so that command 4a prints `docker engine unreachable`. Then the plan is re-executed from Execution Step 1. Step 3 re-checks the code already in the working tree, and every verification command is rerun.
 
 ## Risks
 
