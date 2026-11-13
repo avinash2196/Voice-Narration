@@ -333,7 +333,7 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 | --- | --- | --- |
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
-| OAM-3 Voice service GREEN | Waiting — Docker engine stopped (command 4a must print `docker engine unreachable`) from user | `002_Implementation_Plan_OAM-3.md` revision 3; see OAM-3 stopped execution evidence and OAM-3 revision 3 execution evidence below |
+| OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
 | OAM-4 Inference service RED | Pending | — |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
@@ -410,6 +410,28 @@ Executed 2026-11-13 at HEAD `5ac5177`, Git Bash, from the repository root. Logs 
 - Deviations: command 4b (writing the accepted list) ran in the same shell invocation as 4a, before 4a's output was read. The plan says not to run 4b when 4a prints `reachable`. It only wrote `$TEMP/oam3r3-accepted.txt`, outside the repository (`wc -l` `92`, `sort -c` silent), and no test ran. The list was also extracted from plan lines 671-762 with `sed -n`, not with a heredoc. The content is the same block.
 - Processes: no `python.exe` process was running afterwards, and no container was running. This run started no process that is still running.
 - To resume, on this same approved Implementation Plan: the user stops the Docker engine so that command 4a prints `docker engine unreachable`. Then the plan is re-executed from Execution Step 1. Step 3 re-checks the code already in the working tree, and every verification command is rerun.
+
+### OAM-3 revision 4 GREEN evidence
+
+Executed 2026-11-13 at HEAD `b4ba5fa`, which differs from the plan's `6703cf0` only by the plan itself (`git diff --stat 6703cf0 HEAD` lists only `002_Implementation_Plan_OAM-3.md`; `git diff --stat 1d35815 HEAD -- voice_narration .gitignore tests` printed nothing). Git Bash, from the repository root. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`), outside the repository. The Docker engine was neither checked, started nor stopped (V3Q-3, CON-2).
+
+- Execution Step 1: the Human Review status reads "Revision 4 approved by Avinash Srivastava on 2026-11-13, as written. Not yet executed." `git status --short` printed exactly ` M .gitignore`, ` M voice_narration/simple_voices/application.py`, `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`.
+- Execution Step 3 (code already present, not re-applied): the four code blocks were extracted with `sed -n` (plan lines 160-221, 227-314, 320-516, 527-534, CR removed) to the scratchpad. `cmp` showed both new files identical to their blocks, raw and with CR removed. `git apply -R --check` of both diffs succeeded. The sorted `+`/`-` lines of `git diff -- voice_narration/simple_voices/application.py .gitignore` equal those of the diff blocks (101 lines, `cmp` printed nothing). `git diff --stat -- tests` was empty. V3C-1 holds.
+- Command 1: `compiled`.
+- Command 2: `11 passed in 12.87s` (V3C-2 met). The 11 OAM-2 RED tests now pass.
+- Command 3, no cleanup: `11 passed in 12.98s` (V3C-3 met).
+- Command 4a: `$TEMP/oam3r4-accepted.txt` written with the heredoc; `wc -l` gives `1`; `sort -c` printed nothing.
+- Command 4b: `1 failed, 64 passed, 17 skipped, 43 warnings in 64.11s (0:01:04)`, with no errors; interrupt count `0`.
+- Command 4c: `unexpected:` empty; `accepted, not failing:` empty. The one `FAILED` line is `tests/test_real_model_inference.py::TestRealModelInferenceRED::test_production_inference_module_missing`, with `ImportError: cannot import name 'ProductionInferenceProvider' from 'voice_narration.inference.production'`, as predicted.
+- Command 4d: `82 tests collected in 1.92s`, then `0` (no test from the three ignored files collected). V3C-4 met.
+- Command 5: ` M audio_storage/generation_index.json`, `?? audio_storage/generations/2026-11-13/`.
+- Command 6: `git checkout -- audio_storage`. Then `git clean -fd -- audio_storage` printed `Removing audio_storage/archive/`, `Removing audio_storage/generations/2026-11-13/`, `Removing audio_storage/temp/`. Repeating command 5 printed nothing (V3C-5 met).
+- Command 7: `absent`; `.gitignore:11:/voice_storage/	voice_storage/voices.json` (V3C-6 met).
+- Command 8: `(*, root=None, clock=None) -> fastapi.applications.FastAPI`, then `<repository root>\voice_storage` (V3C-7 met).
+- Command 9: ` M .gitignore`, ` M voice_narration/simple_voices/application.py`, `?? voice_narration/simple_voices/recordings.py`, `?? voice_narration/simple_voices/store.py`. `git diff --stat` reports `2 files changed, 77 insertions(+), 24 deletions(-)`. Apart from these, the only changes are the work-item records under `docs/.ai/chatterbox-original-app/`.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: none in the commands. They ran as written and in order. The suite (4b) ran as a background job, as the plan directs. Its `grep -c` exited 1 because it found no match, and its count of `0` is the expected value.
+- Processes: the background suite job exited. No container was started. Afterwards, the only `python.exe`/`uvicorn.exe` processes belonged to the unrelated `v11\Traffic` project. They started at 16:03 and 16:09, before this run's first test log (16:11). This run started no process that is still running. The scratchpad extraction folder was deleted.
 
 ## Risks
 

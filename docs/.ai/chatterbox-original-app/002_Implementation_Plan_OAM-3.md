@@ -798,6 +798,6 @@ Unchanged: every Proposed Change, all proposed code and diffs, V3C-1 to V3C-3 an
 
 ## Human Review
 
-Status: Revision 4 approved by Avinash Srivastava on 2026-11-13, as written. Not yet executed.
+Status: Revision 4 approved by Avinash Srivastava on 2026-11-13, as written. Executed 2026-11-13 — see `Plan.md` OAM-3 revision 4 GREEN evidence.
 
 History: revisions 2 and 3 were approved by Avinash Srivastava on 2026-11-13. Execution of revision 2 stopped at a blocker (V3C-4, see `Plan.md` OAM-3 stopped execution evidence). Execution of revision 3 stopped at its command 4a, `docker engine reachable`, before the full suite ran (see `Plan.md` OAM-3 revision 3 execution evidence). The user interrupted a rerun of revision 3 before it ran anything. Revision 4 replaces revision 3 for execution once approved.

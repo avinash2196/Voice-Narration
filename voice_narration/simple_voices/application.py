@@ -1,13 +1,19 @@
 """Voice Application - Production API for voice management"""
 
 from fastapi import FastAPI, Request, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from uuid import uuid4
 from datetime import datetime
 import os
+from pathlib import Path
 
-# In-memory storage (development) - replace with DB in production
-VOICES = {}
+from voice_narration.simple_voices.recordings import ConversionError, is_webm, webm_to_wav
+from voice_narration.simple_voices.store import VoiceStore
+
+# Uploaded voices and samples are kept here unless create_app is given a root;
+# the folder is gitignored (CON-6).
+DEFAULT_ROOT = Path(__file__).resolve().parents[2] / "voice_storage"
+CONVERSION_FAILED = {"error": "Upload failed: the recording could not be converted to WAV."}
 
 # Default Google TTS voices available
 DEFAULT_GOOGLE_VOICES = [
@@ -58,13 +64,26 @@ DEFAULT_GOOGLE_VOICES = [
     },
 ]
 
-# Initialize with default voices
-for voice in DEFAULT_GOOGLE_VOICES:
-    VOICES[voice["id"]] = voice
 
+def create_app(*, root=None, clock=None) -> FastAPI:
+    """Create FastAPI application for voice management service.
 
-def create_app() -> FastAPI:
-    """Create FastAPI application for voice management service"""
+    ``root`` is the directory that keeps uploaded voices and samples
+    (``DEFAULT_ROOT`` when omitted); ``clock`` returns the current time
+    (``datetime.now`` when omitted).
+    """
+    clock = clock or datetime.now
+    store = VoiceStore(DEFAULT_ROOT if root is None else root, clock)
+    # Preloaded voices return at every start; changes to them last until a restart.
+    preloaded = {voice["id"]: dict(voice) for voice in DEFAULT_GOOGLE_VOICES}
+
+    def all_voices():
+        return list(preloaded.values()) + store.voices()
+
+    def find_voice(voice_id):
+        voice = preloaded.get(voice_id)
+        return voice if voice is not None else store.get(voice_id)
+
     app = FastAPI(title="Voice Management Service")
 
     @app.get("/health")
@@ -102,6 +121,7 @@ def create_app() -> FastAPI:
                                     audio_data = b'\r\n'.join(lines[i+3:-1])
                                     break
                 
+                sample = webm_to_wav(audio_data) if is_webm(audio_data) else audio_data
                 voice_id = f"voice-{uuid4().hex[:8]}"
                 voice = {
                     "id": voice_id,
@@ -109,17 +129,19 @@ def create_app() -> FastAPI:
                     "format": "WAV",
                     "duration": 45,
                     "fileSize": len(audio_data) if audio_data else len(body),
-                    "uploadedAt": datetime.now().isoformat(),
+                    "uploadedAt": clock().isoformat(),
                     "status": "approved",
                     "approvalScore": 95,
                 }
-                VOICES[voice_id] = voice
+                store.add(voice, sample)
                 return JSONResponse(content=voice, status_code=201)
             else:
                 return JSONResponse(
                     content={"error": "Invalid content type"},
                     status_code=400
                 )
+        except ConversionError:
+            return JSONResponse(content=CONVERSION_FAILED, status_code=400)
         except Exception as e:
             return JSONResponse(
                 content={"error": f"Upload failed: {str(e)}"},
@@ -130,7 +152,7 @@ def create_app() -> FastAPI:
     async def list_voices():
         """List all voices with approved status"""
         voices_list = []
-        for voice_id, voice in VOICES.items():
+        for voice in all_voices():
             voice_copy = dict(voice)
             voice_copy['status'] = 'approved'
             voice_copy['approvalScore'] = voice_copy.get('approvalScore', 95)
@@ -141,7 +163,7 @@ def create_app() -> FastAPI:
     async def list_approved_voices():
         """List approved voices"""
         approved = []
-        for voice_id, voice in VOICES.items():
+        for voice in all_voices():
             if voice.get('status') == 'approved' or not voice.get('status'):
                 voice_copy = dict(voice)
                 voice_copy['status'] = 'approved'
@@ -151,17 +173,35 @@ def create_app() -> FastAPI:
     @app.get("/voices/{voice_id}")
     async def get_voice(voice_id: str):
         """Get voice details"""
-        if voice_id in VOICES:
-            return JSONResponse(content=VOICES[voice_id])
+        voice = find_voice(voice_id)
+        if voice is not None:
+            return JSONResponse(content=voice)
         return JSONResponse(
             content={"error": "Voice not found"},
             status_code=404
         )
 
+    @app.get("/voices/{voice_id}/sample")
+    async def get_voice_sample(voice_id: str):
+        """Return the voice's stored sample"""
+        if find_voice(voice_id) is None:
+            return JSONResponse(
+                content={"error": "Voice not found"},
+                status_code=404
+            )
+        sample = store.sample(voice_id)
+        if not sample:
+            return JSONResponse(
+                content={"error": "Voice sample not found"},
+                status_code=404
+            )
+        return Response(content=sample, media_type="application/octet-stream")
+
     @app.patch("/voices/{voice_id}")
     async def update_voice(voice_id: str, request: Request):
         """Update voice (rename, etc)"""
-        if voice_id not in VOICES:
+        voice = find_voice(voice_id)
+        if voice is None:
             return JSONResponse(
                 content={"error": "Voice not found"},
                 status_code=404
@@ -169,14 +209,17 @@ def create_app() -> FastAPI:
         
         try:
             data = await request.json()
-            if 'name' in data:
-                VOICES[voice_id]['name'] = data['name']
-            if 'status' in data:
-                VOICES[voice_id]['status'] = data['status']
-            if 'approvalScore' in data:
-                VOICES[voice_id]['approvalScore'] = data['approvalScore']
+            changes = {
+                field: data[field]
+                for field in ("name", "status", "approvalScore")
+                if field in data
+            }
+            if voice_id in store:
+                voice = store.update(voice_id, changes)
+            else:
+                voice.update(changes)
             
-            return JSONResponse(content=VOICES[voice_id])
+            return JSONResponse(content=voice)
         except Exception as e:
             return JSONResponse(
                 content={"error": f"Update failed: {str(e)}"},
@@ -186,8 +229,11 @@ def create_app() -> FastAPI:
     @app.delete("/voices/{voice_id}")
     async def delete_voice(voice_id: str):
         """Delete voice"""
-        if voice_id in VOICES:
-            del VOICES[voice_id]
+        if voice_id in preloaded:
+            del preloaded[voice_id]
+            return JSONResponse(content={"success": True})
+        if voice_id in store:
+            store.delete(voice_id)
             return JSONResponse(content={"success": True})
         return JSONResponse(
             content={"error": "Voice not found"},
@@ -206,6 +252,12 @@ def create_app() -> FastAPI:
                 "Access-Control-Allow-Headers": "Content-Type, Authorization",
             }
         )
+
+    # Remove expired voices before any request is answered (Voice Retention)
+    @app.middleware("http")
+    async def remove_expired_voices(request: Request, call_next):
+        store.remove_expired()
+        return await call_next(request)
 
     # Add CORS headers to all responses
     @app.middleware("http")
