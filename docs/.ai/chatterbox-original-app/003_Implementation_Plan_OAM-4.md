@@ -976,4 +976,4 @@ Delete `tests/test_chatterbox_generation_red.py`. Nothing else is changed.
 
 ## Human Review
 
-Status: Approved by Avinash Srivastava on 2026-11-13, as written, including decisions V4D-1 to V4D-10 (provider-list test kept).
+Status: Superseded — not executed. The Plan revision approved by Avinash Srivastava on 2026-11-13 (`Plan.md:5`) replaced the COA-16 this plan was written for (requirements Q46–Q48) and records this plan as superseded (`Plan.md:47`, `:358`). OAM-4 is planned in `004_Implementation_Plan_OAM-4.md`. This plan's earlier approval (Avinash Srivastava, 2026-11-13, as written, including decisions V4D-1 to V4D-10) no longer authorizes execution, and none of its decisions is carried forward.
