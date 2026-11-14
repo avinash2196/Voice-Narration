@@ -356,7 +356,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
 | OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
 | OAM-4 Inference service RED | Complete — valid RED established 2026-11-13 | `004_Implementation_Plan_OAM-4.md`; see OAM-4 RED evidence below (`003_Implementation_Plan_OAM-4.md` superseded, not executed) |
-| OAM-5 Inference service GREEN | Pending | — |
+| OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
 | OAM-6 TTS page RED | Pending | — |
 | OAM-7 TTS page GREEN | Pending | — |
 | OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
@@ -475,6 +475,30 @@ Executed 2026-11-13 at HEAD `c225381`, which differs from the plan's recorded `0
 - Pre-authorized contingencies: none listed, none applied.
 - Deviations: none in the planned commands, which ran as written and in order. Commands 2 and 3 ran as background jobs. Two read-only checks were added: an `awk` mapping of each failure section to its first failing assertion (runs 1 and 2), and a `grep -i error` of the collect log.
 - Processes: both background pytest jobs exited; the servers were threads inside them. No process started by this run is still running.
+
+### OAM-5 GREEN evidence
+
+Executed 2026-11-13 at HEAD `61793b6`, which differs from the plan's `598d9eb` only by the plan itself (`git diff --stat 598d9eb HEAD -- voice_narration tests requirements-dev.txt .gitignore` printed nothing). Git Bash, from the repository root. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`), outside the repository. No Docker, no `gcloud`, no `.env` or key file created, and no Chatterbox call.
+
+- Execution Step 1: Human Review reads "Approved by Avinash Srivastava on 2026-11-13, as written, including decisions N5D-1 to N5D-8". `git status --short` printed nothing. Only `.env.example` exists, and there is no `voice_storage/`.
+- Execution Step 2: `sed -n '186,379p' … | tr -d '\r' > voice_narration/inference/chatterbox.py`.
+- Execution Step 3: the extracted diff's `sha256sum` printed `6284d9e818104c9a597f183f23ad19a511606e320e7e864c72289b5ebe9c928e` (as required). `git apply --check` succeeded, then `git apply` applied it.
+- Command 1: `compiled`; `0f9119817868c690295ceeeb11c0148b6436d1e94864c3ee96f9db7c2e3eedb9 *-`; `d18e1b430e965472c3d6dce90795ded0de5d1456b9c4ca7ab82bbe1fc9489532 *-` (N5C-1 hashes met).
+- Command 2 (run 1): `36 passed, 128 warnings in 84.18s (0:01:24)`; `0` FAILED/ERROR lines (N5C-2 met). The 36 OAM-4 RED tests now pass, with the file unchanged.
+- Command 3 (run 2, no cleanup): `36 passed, 128 warnings in 69.25s (0:01:09)`; `0` (N5C-3 met).
+- Command 4: `git status --short -- audio_storage` printed nothing; `absent` (N5C-4 met).
+- Command 5a: `1`.
+- Command 5b: `1 failed, 100 passed, 17 skipped, 169 warnings in 145.47s (0:02:25)`; interrupt count `0`. It ran as a background job.
+- Command 5c: `unexpected:` empty; `accepted, not failing:` empty. The one `FAILED` line is `tests/test_real_model_inference.py::TestRealModelInferenceRED::test_production_inference_module_missing`, with `ImportError: cannot import name 'ProductionInferenceProvider' from 'voice_narration.inference.production'`. No failure is in the 29 preserved tests (10 + 12 + 3 + 2 + 2 collected) (N5C-5 met).
+- Command 5d: `118 tests collected in 1.94s`; `0` from the ignored files (N5C-5 met).
+- Command 5e: ` M audio_storage/generation_index.json`, `?? audio_storage/generations/2026-11-14/` (as predicted, Plan OAR-1). After `git checkout -- audio_storage`, `git clean -fd -- audio_storage` printed `Removing audio_storage/archive/`, `Removing audio_storage/generations/2026-11-14/`, `Removing audio_storage/temp/`. The repeated status printed nothing (N5C-6 met).
+- Command 6: `ChatterboxSettings(url='', time_limit=1200, voice_service_url='http://localhost:8002', credentials_path='')`, then `git status --short -- audio_storage` printed nothing (N5C-7 met).
+- Command 7: no match lines, `matches: 1`. `git status --short` printed ` M voice_narration/inference/application.py` and `?? voice_narration/inference/chatterbox.py`. `git diff --stat` printed `1 file changed, 48 insertions(+), 3 deletions(-)` (N5C-1, N5C-8 met). No test file changed.
+- Command 8: the `python.exe` processes are PIDs 226024 and 331996 (`v11\Traffic` uvicorn, created 18:44), 134428 and 53964 (`finnie-chat` uvicorn, 19:48), and 303912 and 90164 (`finnie-chat` `ai_gateway_mvp.py`, 21:32). All of them started before this run's first file (22:02), so none is from this run (N5C-9 met).
+- Planned versus executed: the planned changes match the repository changes exactly. One created file and one modified file match the plan's hashes, and nothing else changed outside this folder.
+- Pre-authorized contingencies: none listed and none applied.
+- Deviations: none in the planned commands, which ran as written and in order. Two read-only checks were added: a `grep` of the full log for the accepted failure's `ImportError` line, and per-file counts in the collect log of the 29 preserved tests. To compare against command 8, `ls -l` was run on this run's `$TEMP` files to get their times.
+- Processes: the background suite job exited. No server, container or other process started by this run is still running.
 
 ## Risks
 

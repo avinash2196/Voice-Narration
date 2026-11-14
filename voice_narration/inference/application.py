@@ -8,6 +8,7 @@ M020: Mock Inference Adapter GREEN
 M022: Approved Model Test Prerequisites (provider registry)
 """
 
+import asyncio
 import json
 import os
 import uuid
@@ -19,11 +20,26 @@ from fastapi import FastAPI, Request, Depends, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from .chatterbox import DESCRIPTION as CHATTERBOX_DESCRIPTION
+from .chatterbox import LANGUAGES as CHATTERBOX_LANGUAGES
+from .chatterbox import ChatterboxClient, ChatterboxFailure, ChatterboxSettings
 from .db import SessionLocal, create_all_tables
 from .models import Generation, Voice
 from .providers import InferenceProvider, MockInferenceProvider
 from .registry import ProviderRegistry
 from .storage import AudioStorage
+
+UNSUPPORTED_PROVIDER = "Unsupported provider. Choose google or chatterbox."
+UNSUPPORTED_LANGUAGE = "language must be en or hi for a chatterbox generation."
+
+
+def unsupported_choice_error(provider, language) -> Optional[str]:
+    """The 400 error for an unsupported provider, or for a Chatterbox language other than en or hi."""
+    if provider not in (None, "", "google", "chatterbox"):
+        return UNSUPPORTED_PROVIDER
+    if provider == "chatterbox" and language not in CHATTERBOX_LANGUAGES:
+        return UNSUPPORTED_LANGUAGE
+    return None
 
 
 def get_default_provider_name() -> str:
@@ -81,6 +97,9 @@ class InferenceState:
             job_repository: Job repository for persistence
         """
         self.provider = provider
+        self.chatterbox = ChatterboxClient(ChatterboxSettings.from_environment())
+        # One generation at a time, for every provider; a request that arrives during one waits.
+        self.generation_lock = asyncio.Lock()
         self.jobs_app = jobs_app
         self.job_repository = job_repository
         self._pending_inferences = {}
@@ -293,6 +312,14 @@ class InferenceState:
         
         print(f"[TTS] Generated audio: {len(output.get('audio_bytes', b''))} bytes, {output['output_seconds']:.2f} seconds")
 
+        return self._store_output(job_id, script, voice_id, output)
+
+    async def submit_for_cloning(self, job_id: str, script: str, voice_id: str, language: str) -> dict:
+        """Generate with the deployed Chatterbox; ChatterboxFailure leaves nothing stored."""
+        output = await self.chatterbox.generate(script, voice_id, language)
+        return self._store_output(job_id, script, voice_id, output)
+
+    def _store_output(self, job_id: str, script: str, voice_id: str, output: dict) -> dict:
         # Store the output for later retrieval
         self._pending_inferences[job_id] = output
         self.persist_generation(job_id, script, voice_id, output)
@@ -370,7 +397,12 @@ class InferenceState:
             except Exception:
                 pass
 
-        return backends
+        backends.append({
+            "name": "chatterbox",
+            "provider_class": ChatterboxClient.__name__,
+            "description": CHATTERBOX_DESCRIPTION,
+        })
+        return sorted(backends, key=lambda backend: backend["name"])
 
     async def run_pending(self) -> int:
         """
@@ -447,7 +479,9 @@ def create_app(
         Request body JSON:
         {
             "script": "Text to synthesize",
-            "voice_id": "voice-identifier"
+            "voice_id": "voice-identifier",
+            "provider": "google" | "chatterbox" (optional),
+            "language": "en" | "hi" (required for chatterbox)
         }
 
         Returns:
@@ -461,15 +495,26 @@ def create_app(
             body = await request.json()
             script = body.get("script")
             voice_id = body.get("voice_id")
+            provider = body.get("provider")
+            language = body.get("language")
 
             if not script or not voice_id:
                 return JSONResponse(
                     content={"error": "Missing required fields: script, voice_id"},
                     status_code=400,
                 )
+            choice_error = unsupported_choice_error(provider, language)
+            if choice_error:
+                return JSONResponse(content={"error": choice_error}, status_code=400)
 
-            result = await state.submit_for_inference(job_id, script, voice_id)
+            async with state.generation_lock:
+                if provider == "chatterbox":
+                    result = await state.submit_for_cloning(job_id, script, voice_id, language)
+                else:
+                    result = await state.submit_for_inference(job_id, script, voice_id)
             return JSONResponse(content=result, status_code=200)
+        except ChatterboxFailure as e:
+            return JSONResponse(content={"error": str(e)}, status_code=503)
         except ValueError as e:
             return JSONResponse(content={"error": str(e)}, status_code=400)
         except Exception as e:

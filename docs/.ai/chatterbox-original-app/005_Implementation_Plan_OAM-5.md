@@ -647,4 +647,4 @@ Run `git apply -R "$TEMP/oam5-application.diff"`; if that file is gone, extract 
 
 ## Human Review
 
-Status: Approved by Avinash Srivastava on 2026-11-13, as written, including decisions N5D-1 to N5D-8 (google-auth and requests stay undeclared, N5D-3).
+Status: Executed 2026-11-13 — GREEN verified; see `Plan.md`, OAM-5 GREEN evidence. (Approved by Avinash Srivastava on 2026-11-13, as written, including decisions N5D-1 to N5D-8; google-auth and requests stay undeclared, N5D-3.)
