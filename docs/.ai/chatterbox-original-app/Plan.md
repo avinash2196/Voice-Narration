@@ -355,7 +355,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
 | OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
-| OAM-4 Inference service RED | Pending | Revised scope (Plan revision of 2026-11-13); `003_Implementation_Plan_OAM-4.md` is superseded and not executed; a new Implementation Plan is required |
+| OAM-4 Inference service RED | Complete — valid RED established 2026-11-13 | `004_Implementation_Plan_OAM-4.md`; see OAM-4 RED evidence below (`003_Implementation_Plan_OAM-4.md` superseded, not executed) |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
 | OAM-7 TTS page GREEN | Pending | — |
@@ -453,6 +453,28 @@ Executed 2026-11-13 at HEAD `b4ba5fa`, which differs from the plan's `6703cf0` o
 - Pre-authorized contingencies: none listed, none applied.
 - Deviations: none in the commands. They ran as written and in order. The suite (4b) ran as a background job, as the plan directs. Its `grep -c` exited 1 because it found no match, and its count of `0` is the expected value.
 - Processes: the background suite job exited. No container was started. Afterwards, the only `python.exe`/`uvicorn.exe` processes belonged to the unrelated `v11\Traffic` project. They started at 16:03 and 16:09, before this run's first test log (16:11). This run started no process that is still running. The scratchpad extraction folder was deleted.
+
+### OAM-4 RED evidence
+
+Executed 2026-11-13 at HEAD `c225381`, which differs from the plan's recorded `059102c` only by the plan documents (`git diff --stat 059102c HEAD` lists only `003_Implementation_Plan_OAM-4.md` and `004_Implementation_Plan_OAM-4.md`). Git Bash, from the repository root. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`), outside the repository. No Docker, no `gcloud`, no `.env` created.
+
+- Execution Step 1: Human Review reads "Approved by Avinash Srivastava on 2026-11-13, as written, including decisions N4D-1 to N4D-6." `git status --short` printed exactly `?? tests/test_chatterbox_generation_red.py`. Only `.env.example` exists; no `voice_storage/`.
+- Execution Step 2: `tr -d '\r' < tests/test_chatterbox_generation_red.py | sha256sum` → `4a0762e1443a2552f5173b76aacd655127b23e8771a0ced1ee0b38fdd620f948 *-`; the file was then removed with `rm`.
+- Execution Step 3: the plan's code block (`004_Implementation_Plan_OAM-4.md` lines 175-612) was extracted with `sed -n '175,612p' | tr -d '\r'` into `tests/test_inference_provider_choice_red.py` (no CR in the result).
+- Command 1: `deleted`; `f0f8ab986f603c79bd52a81f4826d3fac6e4da77d9a75ab7eeff32fe7c892365 *-`; `compiled` (N4C-1 met).
+- Command 2 (run 1): `36 failed, 200 warnings in 72.02s (0:01:12)`; `36` FAILED/ERROR lines; `0` ERROR lines; class counts `assert 200 == 503` 22, `assert 200 == 400` 12, `a second generation ran while the first was generating` 1, provider-list assertion 1 (N4C-2 met). Mapping each failure section to its first failing assertion: all 21 `test_each_pre_call_cause_answers_503_with_its_message_and_no_fallback[…]` and `test_each_generation_uses_the_provider_it_names` → `assert 200 == 503` (the Chatterbox request was answered `200` by the startup provider); all 12 `test_unsupported_provider_or_language_is_rejected_without_generating[…]` → `assert 200 == 400`; `test_a_generation_request_that_arrives_during_another_waits_then_completes` → `AssertionError: a second generation ran while the first was generating`; `test_provider_list_adds_chatterbox_and_keeps_the_other_providers` → `AssertionError: assert ['azure', 'google', 'mock'] == ['azure', 'ch...ogle', 'mock']`. Each test is in exactly one class. Failing tests: all 36 in the file.
+- Command 3 (run 2, no cleanup): `36 failed, 200 warnings in 71.30s (0:01:11)`; `36`; `0`; class counts 22, 12, 1, 1, with the same per-test mapping (N4C-3 met).
+- Command 4: `git status --short -- audio_storage` printed nothing; `absent` (N4C-4 met).
+- Command 5: `29 passed, 42 warnings in 4.11s`. Then `git status --short -- audio_storage` printed ` M audio_storage/generation_index.json`, `?? audio_storage/generations/2026-11-14/` (as predicted). `git checkout -- audio_storage`; `git clean -fd -- audio_storage` printed `Removing audio_storage/archive/`, `Removing audio_storage/generations/2026-11-14/`, `Removing audio_storage/temp/`; the repeated status printed nothing (N4C-5 met).
+- Command 6: `118 tests collected in 4.42s`; `36`; `0`. The only log lines containing "error" are three `TestInferenceErrorHandling` test ids, not collection errors (N4C-6 met).
+- Command 7: no match lines; `matches: 1` (N4C-7 static part met). Neither run's log contains an `ERROR` line, so the guard recorded no lookup outside the machine (N4C-7 met).
+- Command 8: `?? tests/test_inference_provider_choice_red.py`, plus the work-item changes under `docs/.ai/chatterbox-original-app/`.
+- Command 9: the only `python.exe` processes are PIDs 106900, 303008, 226024 and 331996, all from the unrelated `v11\Traffic` project, created 18:44:48–18:44:54, before this run; none from this run (N4C-8 met).
+- Why this is valid RED: every failure is an assertion on contracted behavior that the inference service lacks — `provider`/`language` are not read (`application.py:462-463`), so Chatterbox generations are produced by the startup provider and unsupported values are answered `200`; no lock exists, so two generations ran concurrently; Chatterbox is not in the provider list. No failure is an import, fixture, server-start, configuration or environment error. Each assertion was re-read against `API-Contract.md` (Inference Generation failures 2-4 and No fallback, Generation Waiting, Chatterbox Call steps 1-3, OAF-1-OAF-4, Inference Provider List, Inference Service Settings) and asserts the contracted behavior, not the current state. Tests that assert something does not happen first exercise the positive case in the same test: the rejection tests first assert the `400` body; the pre-call tests first assert the earlier `200` generation and its saved files before asserting nothing changed; the routing test first gets four `200` startup generations and a used database refusal before its Chatterbox request.
+- Preserved-behavior tests expected to pass at RED: none in the new file, and none passed. The 29 preserved tests in command 5 passed.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: none in the planned commands, which ran as written and in order. Commands 2 and 3 ran as background jobs. Two read-only checks were added: an `awk` mapping of each failure section to its first failing assertion (runs 1 and 2), and a `grep -i error` of the collect log.
+- Processes: both background pytest jobs exited; the servers were threads inside them. No process started by this run is still running.
 
 ## Risks
 
