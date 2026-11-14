@@ -2,7 +2,9 @@
 
 ## Status
 
-Approved by Avinash Srivastava on 2026-11-13, as written. The pre-existing frontend failures (90 at planning time, including the two "Max 5000 chars/request" label tests) and the two known backend failures are accepted as named old failures and are not repaired in this work item.
+Approved by Avinash Srivastava on 2026-11-13, as written, including the five planning calls reported with it (no-fallback check on pre-call causes in OAM-4; OAM-5 call behavior with no RED test, OAR-9; OAM-6/OAM-7 unchanged; 1200 s default checked at Final Review; long-text manual case in OAM-8). This revision folds in the requirements revision approved on 2026-11-13 at `a5a521e` (Q46–Q48: COA-16, AC-6 and the Dependency-failure characteristic; automated tests neither fake nor call Chatterbox) and the user's decision V3Q-3 (`002_Implementation_Plan_OAM-3.md:736`) on the three Docker-dependent test files. OAM-1–OAM-3 and their evidence are unchanged.
+
+The previous revision was approved by Avinash Srivastava on 2026-11-13, as written. Under it, the pre-existing frontend failures (90 at planning time, including the two "Max 5000 chars/request" label tests) and the two known backend failures were accepted as named old failures, not repaired in this work item.
 
 ## Objective
 
@@ -32,12 +34,19 @@ Existing tests that cover this behavior:
 
 Pre-existing failures:
 
-- Named by the user: `tests/test_voice_enrollment.py` times out; `tests/test_real_model_inference.py` has one failure. Not run during planning.
+- Named by the user: `tests/test_voice_enrollment.py` times out; `tests/test_real_model_inference.py` has one failure. Not run during planning. By the user's decision V3Q-3, `tests/test_voice_enrollment.py`, `tests/test_persistence.py` and `tests/test_authentication_consent.py` are left out of every backend-suite run (OAV-2): they need local containers (CON-2). At OAM-3 the suite without them collected 82 tests and failed only on `tests/test_real_model_inference.py::TestRealModelInferenceRED::test_production_inference_module_missing` (OAM-3 revision 4 GREEN evidence).
 - Observed during planning: the frontend suite (`npx vitest run` after `npm ci`, 2026-11-13, HEAD `664cee4`) reports `Test Files 2 failed | 2 passed (4)`, `Tests 90 failed | 263 passed (353)`.
   - `tts.spec.tsx`, 27 failures: M3.2.1–M3.2.7, M3.3.1–M3.3.6, M3.7.1–M3.7.7, M3.11.1, M3.11.2, M3.11.3, M3.11.5, M3.12.1, M3.12.5, M3.12.7. Example cause: M3.3.5 renders "fetch failed", because the test mock serves endpoints the page does not call (`frontend/tests/mocks/tts-handlers.ts:18-215` against `frontend/src/services/ttsApi.ts:42`, `:183`, `:204`).
   - `voice.spec.tsx`, 63 failures: M2.2.4, M2.3.2, M2.3.5, M2.6.7, M2.8.2–M2.8.8, M2.9.1–M2.9.8, M2.10.1–M2.10.10, M2.11.1–M2.11.9, M2.12.1–M2.12.9, M2.13.1–M2.13.8, M2.14.1–M2.14.8.
   - Each failure was seen in one run; each Implementation Plan confirms its baseline (`implementation-planning` Pre-existing Failures).
 - `npm run type-check` passes at baseline.
+
+Re-inspected for this revision at HEAD `a5a521e`, 2026-11-13:
+
+- Since `664cee4` the only code and test changes are OAM-2's `tests/test_voice_sample_persistence_red.py` and OAM-3's changes to `voice_narration/simple_voices/application.py` and `.gitignore`, plus the new `voice_narration/simple_voices/recordings.py` and `store.py` (`git diff --stat 664cee4 HEAD -- voice_narration tests .gitignore frontend`). The OAM-3 change is in commit `0465867`. No inference-service or frontend file has changed, so the inference and TTS page facts above still hold.
+- The working tree holds one untracked file outside this folder: `tests/test_chatterbox_generation_red.py`, from an interrupted OAM-4 run. With CR removed, its SHA-256 is `4a0762e1443a2552f5173b76aacd655127b23e8771a0ced1ee0b38fdd620f948`, the value `003_Implementation_Plan_OAM-4.md` (V4C-1) gives for its fake-Chatterbox tests. That Implementation Plan was written for the earlier COA-16 and is superseded by this revision. Neither the plan nor the file is evidence for any milestone. The OAM-4 Implementation Plan states how the file is handled, for review.
+- The inference service loads `.env`, `.env.local` and `.env.production` from the repository root when they exist (`voice_narration/inference/db.py:14-16`). None of them exists in this worktree.
+- Of the three files V3Q-3 leaves out, none references `voice_narration.inference`, `simple_voices` or the frontend (`grep -l -i "inference\|simple_voices\|frontend"` found no match). `tests/test_persistence.py` imports the `persistence` modules of the `auth`, `policy`, `consent`, `voices`, `jobs`, `artifacts`, `ai` and `audit` packages (`tests/test_persistence.py:22-31`, `:119`), none of which this work item changes.
 
 Environment facts: a fresh worktree has no `frontend/node_modules`; `npm ci` installs it from the committed lockfile, into a gitignored folder. The Python environment on PATH has the packages pinned in `requirements-dev.txt`, plus `pytest-asyncio`, the Google Text-to-Speech client and the Google authentication library, none of which `requirements-dev.txt` declares. The audio library pinned in `requirements-dev.txt` encoded a WebM/Opus clip and converted it to WAV in a scratch check outside the repository during planning.
 
@@ -45,9 +54,9 @@ Environment facts: a fresh worktree has no `frontend/node_modules`; `npm ci` ins
 
 - An approved API/external contract for the voice-service and inference-service behavior this work item changes, and for the settings it adds (OAM-1).
 - The voice service: it keeps each voice's sample, stores Chrome recordings as WAV (OAD-1), keeps voices and samples across restarts, deletes them 5 days after upload, keeps automatic approval and the shared list (OAM-2, OAM-3).
-- The inference service: it uses the provider each generation names, clones through the deployed Chatterbox with the chosen language and the voice's sample, gives one message per failure cause, applies the configurable time limit, does not fall back to Google, keeps cloned generations in history, and makes a second request wait (OAM-4, OAM-5).
+- The inference service: it uses the provider each generation names, lists Chatterbox, clones through the deployed Chatterbox with the chosen language and the voice's sample, gives one message per failure cause, applies the configurable time limit, does not fall back to Google, keeps cloned generations in history, and makes a second request wait (OAM-4, OAM-5). Its automated tests neither fake nor call Chatterbox and cover only the behavior COA-16 lists (OAM-4).
 - The TTS page: Google or Chatterbox chosen per generation, recorded and uploaded voices selectable for Chatterbox, English or Hindi chosen, failure messages shown, cloned audio played, and no text cap for any provider (OAM-6, OAM-7).
-- The user's manual check against the deployed Cloud Run service (OAM-8).
+- The user's manual check against the deployed Cloud Run service of everything that needs a Chatterbox call, with a failure cause the user cannot reproduce recorded as not verified (OAM-8, COA-16).
 
 ## Out of Scope
 
@@ -69,7 +78,7 @@ Not required for this work item (requirements Operational Characteristics): scal
 ## Requirements and Constraints
 
 - Requirements COA-1–COA-17, constraints CON-1–CON-6, scenarios S-1–S-8 and acceptance criteria AC-1–AC-13, as approved in `requirements.md`.
-- Operational characteristics as approved: each local service runs as one instance and Chatterbox runs on Cloud Run; a Chatterbox call may last up to the configurable limit, default 1200 s, and cold starts take about 80–100 s; a request that arrives during a generation waits; dependency failure shows the error for its cause with no Google fallback, and automated tests use a fake Chatterbox; voices and samples survive a restart and are deleted 5 days after upload; generated clips keep the 30-day retention. Scale, availability and observability are not required.
+- Operational characteristics as approved: each local service runs as one instance and Chatterbox runs on Cloud Run; a Chatterbox call may last up to the configurable limit, default 1200 s, and cold starts take about 80–100 s; a request that arrives during a generation waits; dependency failure shows the error for its cause with no Google fallback, automated tests neither fake nor call Chatterbox, and failures that need a Chatterbox call are checked only in the manual Cloud Run test; voices and samples survive a restart and are deleted 5 days after upload; generated clips keep the 30-day retention. Scale, availability and observability are not required.
 - Deployed Chatterbox interface (fixed constraint, CON-3, CON-5): the Chatterbox Synthesize and Chatterbox Caller Identity interfaces of the reference contract (`feature/voice-cloning` at `abbe387`, `docs/.ai/chatterbox-cloud-run/API-Contract.md`). Its other sections and its labels are not adopted.
 - User constraint for this Plan (create-plan arguments, 2026-11-13): tracked files under `audio_storage/` must not be modified; when a test run touches them, they are restored (OAV-3).
 - **OAD-1 Chrome recordings reach Chatterbox as WAV (Plan decision; requirements Decisions Deferred, COA-6).** The voice service stores the sample of a Chrome recording as WAV audio when it stores the sample, whatever file name or type label the upload carries. A WAV upload is stored as received. MP3 and OGG uploads stay accepted and are stored as received; they are not required to clone. The recorder and the upload form stay unchanged. Reason: the deployed Chatterbox is unchanged (CON-3), and WAV is the one format the requirements require to clone (COA-6). Converting when the sample is stored means every consumer of the sample gets WAV. The conversion can be tested in the backend suite with a WebM recording built inside the test, using the audio library already pinned in `requirements-dev.txt` (Current State). Recording WAV in the browser would change the recorder, which the frontend test environment cannot record with.
@@ -78,7 +87,7 @@ Not required for this work item (requirements Operational Characteristics): scal
 
 - Which language is preselected when Chatterbox is chosen. COA-5 requires only that the user can choose English or Hindi. Decided in the OAM-6 Implementation Plan, for review.
 - Whether Google voices are also listed when Chatterbox is chosen. COA-3 requires that recorded and uploaded voices are listed and selectable. Decided in the OAM-6 Implementation Plan, for review.
-- How each Implementation Plan's Acceptance / Completion Criteria treat the pre-existing failures named in Current State. The user decides this before approving each Implementation Plan whose verification runs them (`implementation-planning` Pre-existing Failures). Repairing those failing tests is not in this work item's requirements.
+- How each Implementation Plan's Acceptance / Completion Criteria treat the pre-existing failures named in Current State. The user decides this before approving each Implementation Plan whose verification runs them (`implementation-planning` Pre-existing Failures). Repairing those failing tests is not in this work item's requirements. For the three Docker-dependent backend test files the user has decided (V3Q-3): they are left out of every backend-suite run, as OAV-2 records.
 
 ## External Contract Requirements
 
@@ -108,9 +117,9 @@ Milestone boundaries:
 
 - **OAM-1 (CONTRACT) first:** the work item changes operations between the TTS page, the inference service and the voice service, and adds operator settings. Every repository-changing milestone depends on that behavior being approved first.
 - **Voice service pair (OAM-2, OAM-3):** a separate engineering decision — how voices and samples are stored durably, retained for 5 days, and converted under OAD-1. The voice service can be verified on its own in the backend suite.
-- **Inference service pair (OAM-4, OAM-5):** a separate engineering decision — how the Chatterbox call is made with an identity token and a time limit, how failures map to nine messages, and how per-generation routing and waiting work. Ordering: it is planned against the executed voice service, whose sample it sends. Its tests use a fake Chatterbox (COA-16).
+- **Inference service pair (OAM-4, OAM-5):** a separate engineering decision — how the Chatterbox call is made with an identity token and a time limit, how failures map to nine messages, and how per-generation routing and waiting work. Ordering: it is planned against the executed voice service, whose sample it sends. Its tests neither fake nor call Chatterbox (COA-16), so OAM-4 verifies only the behavior that needs no Chatterbox call; the behavior that needs a call is delivered by OAM-5 and verified only at OAM-8 (OAR-9).
 - **TTS page pair (OAM-6, OAM-7):** different verification setup (the frontend suite, not the backend suite), and an independent capability — provider, voice and language selection, the message display, and the cap removal. Ordering: it is planned against the executed inference service whose requests it sends.
-- **OAM-8 (OTHER) last:** different verification setup — the user, the deployed Cloud Run service and real credentials (COA-16, CON-2). It changes no production behavior.
+- **OAM-8 (OTHER) last:** different verification setup — the user, the deployed Cloud Run service and real credentials (COA-16, CON-2). It is the only check of the behavior that needs a Chatterbox call (COA-16). It changes no production behavior.
 - No FOUNDATION milestone: the Plan Content Rule 11 check in each RED milestone finds every prerequisite in place. No REFACTOR milestone: none is requested.
 
 ### OAM-1 — Local service contract (CONTRACT)
@@ -167,40 +176,44 @@ Milestone boundaries:
 
 ### OAM-4 — Inference service RED (RED)
 
-- **Capability / purpose:** executable evidence that the inference service cannot route a generation to Chatterbox and does not report Chatterbox failures as required.
-- **Rationale:** opens the inference service pair (Milestone boundaries).
+- **Capability / purpose:** executable evidence that the inference service does not use the provider a generation names, does not list Chatterbox, does not give the answers for the four failure causes that occur before any Chatterbox call, and does not make a second request wait.
+- **Rationale:** opens the inference service pair (Milestone boundaries). Its tests cover only the behavior that needs no Chatterbox call (COA-16).
 - **Milestone type:** RED.
 - **Predecessor:** OAM-3.
-- **Scope** — tests that verify, with a fake Chatterbox and no network (COA-16), against the approved contract:
-  - A generation that names Chatterbox sends the deployed Chatterbox (as CON-5 and the reference contract define) the entered text whole, unsplit and longer than 5000 characters, along with the chosen language and the selected voice's stored sample. It carries an identity token for the configured Chatterbox URL, and the audio Chatterbox returns becomes the generation's audio (COA-1, COA-4, COA-5, CON-5; OAC-1, OAC-4, OAC-7).
-  - A generation that names Google is generated by Google, not Chatterbox; a generation that names no provider behaves as OAC-2 defines (COA-1).
-  - Each of the nine failure causes produces its own message as OAC-5 defines, each ending "Please retry, or choose another provider." (COA-7).
-  - When Chatterbox fails, no Google generation is made and no audio is saved (COA-8).
-  - The time limit defaults to 1200 seconds and can be configured as OAC-6 defines; a call that exceeds it produces the timed-out message (COA-9).
-  - A cloned generation appears in history, can be downloaded and deleted, and has its 30-day retention recorded, as OAC-11 defines (COA-10).
-  - A generation request that arrives while another is generating waits and then completes, as OAC-8 defines (COA-13).
-- **Prerequisites (Plan Content Rule 11):** the backend test runner with its async support (already used by the existing inference tests, though undeclared — OAR-4), the HTTP test client and the pinned HTTP client library are installed. The fake Chatterbox, the fake identity token and the sample source are test code. After OAM-3, the voice service the tests may use exists. Nothing is missing, so no FOUNDATION milestone is needed.
-- **Owned requirements / concerns:** COA-16's automated-test part (these tests use a fake Chatterbox and no network). It verifies COA-1, COA-4, COA-5, COA-7, COA-8, COA-9 and COA-10 (inference parts), COA-13 (waiting) and CON-5.
+- **Scope** — tests that verify, against the approved contract, with no test faking or calling Chatterbox (COA-16):
+  - A generation that names Google is produced by the startup provider, not by Chatterbox. A generation that names no provider, or a provider other than Google or Chatterbox, behaves as OAC-2 defines (COA-1; OAC-1, OAC-2).
+  - A generation that names Chatterbox is handled as a Chatterbox generation. This is shown by its answers to the four pre-call causes below, not by a call (COA-1).
+  - A Chatterbox generation takes English or Hindi as its language choice, and is answered as the contract defines when the choice is missing or is anything else (COA-5; OAC-1).
+  - Chatterbox appears in the provider list as OAC-3 defines (COA-1; OAC-3).
+  - Each of the four failure causes that occur before any Chatterbox call produces its own message, ending "Please retry, or choose another provider.", in the order OAC-5 defines. The four causes are not configured, invalid time-limit setting, voice sample unreadable and identity token unavailable (COA-7; OAC-4, OAC-5, OAC-6, OAC-7).
+  - When one of these four causes fails a Chatterbox generation, no other provider produces it, and no audio or history entry is saved (COA-8; OAC-11).
+  - A generation request that arrives while another is generating waits, then completes, as OAC-8 defines. This is shown with generations that need no Chatterbox call (COA-13).
+- **Prerequisites (Plan Content Rule 11):** the backend test runner with its async support (already used by the existing inference tests, though undeclared — OAR-4) and the HTTP test client are installed. After OAM-3, the voice service exists, holding the stored sample that the identity-token case needs, because that cause is checked after the sample (OAC-5 order). The tests need no Chatterbox, no Google credential and no stand-in for either. Nothing is missing, so no FOUNDATION milestone is needed.
+- **Owned requirements / concerns:** none delivered. It verifies COA-1 (inference part, including the provider list), COA-5 (language choice accepted), COA-7 (the four pre-call causes), COA-8 (on those causes) and COA-13 (waiting) (Requirement Traceability).
 - **Preserved tests (unchanged):** `tests/test_inference.py`, `tests/test_provider_registry.py`, `tests/test_generation_history_download.py`, `tests/test_generation_persistence_red.py`, `tests/test_generation_delete_search_red.py`.
-- **Explicit exclusions:** no production, build or configuration change; no change to the preserved tests; no network; no voice-service or TTS-page tests; tracked `audio_storage/` files left unchanged.
-- **Success criteria:** each new test fails only because the approved behavior is missing (valid RED evidence, recorded). The preserved tests still pass.
+- **Explicit exclusions:** no production, build or configuration change; no change to the preserved tests; no test that fakes, stands in for or calls Chatterbox, and no test whose settings leave a path to a Chatterbox call (COA-16, OAR-8); no call to anything outside the local machine; no voice-service or TTS-page tests; tracked `audio_storage/` files left unchanged. Also excluded, because each needs a Chatterbox call and is checked only at OAM-8 (COA-16): a successful clone, the language Chatterbox uses, the identity token's account and audience (CON-5), text sent whole to Chatterbox, the time limit bounding the call and its 1200-second default, the causes timed out, cannot connect, access denied, service error and not audio, and a cloned generation's history and retention. The superseded `003_Implementation_Plan_OAM-4.md` and the untracked file from its interrupted run are not RED evidence (Current State).
+- **Success criteria:** each new test fails only because the approved behavior is missing (valid RED evidence, recorded in Execution Status). No new test fakes or calls Chatterbox. The preserved tests still pass.
 
 ### OAM-5 — Inference service GREEN (GREEN)
 
-- **Capability / purpose:** the inference service clones through the deployed Chatterbox for generations that name it, and reports each failure cause.
-- **Rationale:** closes the inference service pair.
+- **Capability / purpose:** the inference service uses the provider each generation names, lists Chatterbox, clones through the deployed Chatterbox for generations that name it, makes a second request wait, and answers each failure cause.
+- **Rationale:** closes the inference service pair. Under COA-16, part of the behavior it delivers needs a Chatterbox call, so no automated test drives it. That part is delivered here, reviewed as exact code in this milestone's Implementation Plan, and verified only at OAM-8 (OAR-9).
 - **Milestone type:** GREEN.
 - **Predecessor:** OAM-4.
 - **Scope** — the behavior that makes the OAM-4 evidence pass:
   - Each generation uses the provider it names (COA-1, OAC-1, OAC-2), and Chatterbox appears in the provider list as OAC-3 defines.
-  - A Chatterbox generation sends the text whole, the chosen language and the voice's stored sample to the deployed Chatterbox, with an identity token for the CON-5 service account obtained from the OAC-7 settings, and returns the speech (COA-4, COA-5, CON-5).
-  - Each of the nine failure causes gets its own message (COA-7, OAC-5), with no Google fallback (COA-8).
-  - The configurable time limit, default 1200 seconds (COA-9, OAC-6).
-  - Cloned generations in history, download and deletion, with the 30-day retention (COA-10, OAC-11).
-  - Waiting for a request that arrives during a generation (COA-13, OAC-8), and delivery of the result or failure as OAC-9 defines.
-- **Owned requirements / concerns:** COA-1 (inference part), COA-4 (cloned speech produced), COA-5 (inference part), COA-7 (inference part), COA-8, COA-9, COA-10, COA-13 (waiting), CON-5; the error mapping and the Chatterbox settings.
-- **Explicit exclusions:** no change to the mock, Google or Azure providers or their tests (COA-14); no Google fallback; no duplicate prevention; no text splitting; no change to the deployed Chatterbox and no copied Chatterbox source; no Docker or `gcloud`; no logging or metrics added for observability; no voice-service or TTS-page change; no change to tracked `audio_storage/` files.
-- **Success criteria:** the OAM-4 tests and the preserved tests pass; the full backend suite passes apart from the named pre-existing failures; `audio_storage/` is unchanged (OAV-3).
+  - English or Hindi is taken as a Chatterbox generation's language choice (COA-5, OAC-1).
+  - Each of the four pre-call causes gets its own message, in the contracted order (COA-7; OAC-4, OAC-5, OAC-6, OAC-7), with no Google fallback and nothing saved (COA-8, OAC-11).
+  - A request that arrives during a generation waits (COA-13, OAC-8).
+- **Scope** — the behavior that needs a Chatterbox call, delivered here and verified only at OAM-8 (COA-16):
+  - A Chatterbox generation sends the deployed Chatterbox the text whole and unsplit, the chosen language and the voice's stored sample. It sends them with an identity token for the CON-5 service account, obtained from the OAC-7 settings, and the speech Chatterbox returns becomes the generation's audio (COA-4, COA-5, COA-17, CON-5).
+  - Each of the five causes timed out, cannot connect, access denied, service error and not audio gets its own message (COA-7, OAC-5), with no Google fallback and nothing saved (COA-8).
+  - The configurable time limit, default 1200 seconds, bounds the call, and reaching it produces the timed-out message (COA-9, OAC-6).
+  - Cloned generations appear in history and can be downloaded and deleted, with the 30-day retention (COA-10, OAC-11).
+  - The result or failure is delivered as OAC-9 defines.
+- **Owned requirements / concerns:** COA-1 (inference part), COA-4 (cloned speech produced), COA-5 (inference part), COA-7 (inference part), COA-8, COA-9, COA-10, COA-13 (waiting), COA-17 (inference part: text sent whole to Chatterbox), CON-5; the error mapping and the Chatterbox settings.
+- **Explicit exclusions:** no change to the mock, Google or Azure providers or their tests (COA-14); no Google fallback; no duplicate prevention; no text splitting; no change to the deployed Chatterbox and no copied Chatterbox source; no Docker or `gcloud`; no logging or metrics added for observability; no voice-service or TTS-page change; no change to tracked `audio_storage/` files; no automated test that fakes or calls Chatterbox (COA-16).
+- **Success criteria:** the OAM-4 tests and the preserved tests pass. The backend suite, run as OAV-2 defines without the three V3Q-3 files, passes apart from the named pre-existing failure. `audio_storage/` is unchanged (OAV-3). Completing OAM-5 does not claim the behavior that needs a Chatterbox call; its evidence comes from OAM-8.
 
 ### OAM-6 — TTS page RED (RED)
 
@@ -243,57 +256,65 @@ Milestone boundaries:
 
 ### OAM-8 — Cloud Run manual validation (OTHER)
 
-- **Capability / purpose:** the user's manual check that a voice recorded in Chrome, and a voice uploaded as WAV, each produce speech in that voice through the deployed Chatterbox, in English and in Hindi, playing on the TTS page (COA-16, AC-4, AC-5).
-- **Rationale:** requirements COA-16 and Business Context Outcome make the user's manual check against Cloud Run the final check. It needs the user, the deployed service and real credentials.
+- **Capability / purpose:** the user's manual check, against the deployed Cloud Run service, of everything that needs a Chatterbox call (COA-16). It covers cloned speech for a voice recorded in Chrome and a voice uploaded as WAV, in English and in Hindi, playing on the TTS page; text longer than 5000 characters spoken whole; a cloned generation's history, download, deletion and 30-day retention; and the five call-time failure causes, each with its own message and no Google fallback (COA-4, COA-5, COA-7, COA-8, COA-9, COA-10, COA-17, CON-5; AC-1, AC-4–AC-9, AC-13).
+- **Rationale:** requirements COA-16 and Business Context Outcome make the user's manual check against Cloud Run the only check of the behavior that needs a Chatterbox call. It needs the user, the deployed service and real credentials.
 - **Milestone type:** OTHER (validation protocol).
 - **Predecessor:** OAM-7.
 - **Scope:**
-  - A validation protocol, set out in its Implementation Plan: the steps to start the local services one instance each with the OAC-7 settings, and the cases to run.
-  - Inputs, all supplied by the user and never committed (CON-6): a voice recorded in Chrome on `/voices`, a WAV file, the service-account key and the local settings.
-  - For each case, the expected observation and the met or not-met rule.
-  - The cases: S-1 in English and in Hindi; S-2 in English and in Hindi.
-- **No-behavior-change statement:** it changes no production code, test, build or configuration file; the only repository change is the evidence it records in this Plan.
-- **Baseline evidence:** the full-suite results recorded at OAM-7, and the user's confirmation that the deployed service is the unchanged one at the CON-5 URL.
-- **Preserved tests:** the full backend and frontend suites recorded at OAM-7. OAM-8 changes no file they cover.
-- **Completion evidence:** the user's recorded met or not-met result for each case, with the voice heard and the language chosen.
-- **Owned requirements / concerns:** COA-16's manual part; the deployment characteristic (local services one instance each, Chatterbox on Cloud Run).
-- **Explicit exclusions:** no Docker or `gcloud` (CON-2); no change to the deployed service (CON-3); no committed sample, key or `.env` (CON-6); no code change. A not-met case is reported for replanning, not fixed here.
-- **Success criteria:** every case is recorded as met. Execution Status shows `Waiting — manual check from user` until the user records the results.
+  - A validation protocol, set out in its Implementation Plan. It gives the steps to start the local services one instance each with the OAC-7 settings, the setting changes each failure case needs, and the cases to run.
+  - Inputs, all supplied by the user and never committed (CON-6): a voice recorded in Chrome on `/voices`, a WAV file, the service-account key, the local settings, and any setting the user changes for a failure case.
+  - For each case, the expected observation and the met or not-met rule. For each of the five failure causes, a third result, not verified, applies when the user cannot reproduce the cause (COA-16, AC-6).
+  - The cases:
+    - S-1 in English and in Hindi, and S-2 in English and in Hindi: the user hears the entered text in the selected voice and the chosen language, playing on the TTS page (COA-4, COA-5, COA-6, COA-12, CON-5).
+    - A Chatterbox generation with text longer than 5000 characters: all of it is spoken (COA-17).
+    - S-5 for a cloned generation: it appears in history, can be downloaded and deleted, and its 30-day retention is observed as the Implementation Plan sets out (COA-10).
+    - S-4, one case per cause: timed out (with a time limit the user sets, the message names that limit), cannot connect, access denied, service error and not audio. Each shows its own message ending "Please retry, or choose another provider.", and no Google audio and no history entry is produced (COA-7, COA-8, COA-9).
+- **No-behavior-change statement:** it changes no production code, test, build or configuration file. Its owned requirement, COA-16's manual part, is a check of the behavior OAM-5 and OAM-7 delivered, not a change to it. The only repository change is the evidence it records in this Plan.
+- **Baseline evidence:** the backend-suite result (OAV-2) and the full frontend-suite result recorded at OAM-7, and the user's confirmation that the deployed service is the unchanged one at the CON-5 URL.
+- **Preserved tests:** the backend suite as OAV-2 defines it and the full frontend suite, as recorded at OAM-7. OAM-8 changes no file they cover.
+- **Completion evidence:** the user's recorded result for each case, with the voice heard and the language chosen. The result is met or not-met, and for each of the five failure causes it may also be not verified.
+- **Owned requirements / concerns:** COA-16's manual part: everything that needs a Chatterbox call is checked here, and a cause the user cannot reproduce is recorded as not verified. Also the deployment characteristic (local services one instance each, Chatterbox on Cloud Run).
+- **Explicit exclusions:** no Docker or `gcloud` (CON-2); no change to, or redeployment of, the deployed service, including to reproduce a failure cause (CON-3); no committed sample, key or `.env` (CON-6); no code change. A not-met case is reported for replanning, not fixed here.
+- **Success criteria:** every case other than the five failure causes is recorded as met. Each of the five failure causes is recorded as met, or as not verified when the user cannot reproduce it (COA-16). No case is recorded as not-met. Execution Status shows `Waiting — manual check from user` until the user records the results.
 
 ## Requirement Traceability
 
 | Requirement / Concern | Owning Milestone | Verifying Milestone |
 | --- | --- | --- |
-| COA-1 provider chosen per generation — inference service uses the provider the request names | OAM-5 | OAM-4 |
+| COA-1 provider chosen per generation — inference service uses the provider the request names, and lists Chatterbox | OAM-5 | OAM-4 |
 | COA-1 provider chosen per generation — page offers Google and Chatterbox and sends the choice | OAM-7 | OAM-6 |
 | COA-2 sample kept by the voice service | OAM-3 | OAM-2 |
 | COA-3 recorded and uploaded voices selectable on `/tts` when Chatterbox is chosen | OAM-7 | OAM-6 |
-| COA-4 cloned speech produced through the deployed Chatterbox for the voice, text and language | OAM-5 | OAM-4 |
+| COA-4 cloned speech produced through the deployed Chatterbox for the voice, text and language (needs a Chatterbox call, COA-16) | OAM-5 | OAM-8 |
 | COA-4 cloned speech plays on the TTS page | OAM-7 | OAM-6 |
 | COA-5 English or Hindi — chosen on the page and sent | OAM-7 | OAM-6 |
-| COA-5 English or Hindi — forwarded to Chatterbox | OAM-5 | OAM-4 |
-| COA-6 Chrome recordings and WAV uploads stored so they clone; MP3/OGG still accepted (with OAD-1) | OAM-3 | OAM-2 |
-| COA-7 one message per failure cause — produced by the inference service | OAM-5 | OAM-4 |
+| COA-5 English or Hindi — taken by the inference service as a Chatterbox generation's language choice | OAM-5 | OAM-4 |
+| COA-5 English or Hindi — forwarded to Chatterbox and used (needs a Chatterbox call, COA-16) | OAM-5 | OAM-8 |
+| COA-6 Chrome recordings and WAV uploads stored so they clone; MP3/OGG still accepted (with OAD-1) | OAM-3 | OAM-2 (stored as WAV or as received); OAM-8 (they clone) |
+| COA-7 one message per failure cause — the four pre-call causes (not configured, invalid time-limit setting, voice sample unreadable, identity token unavailable), produced by the inference service | OAM-5 | OAM-4 |
+| COA-7 one message per failure cause — the five call-time causes (timed out, cannot connect, access denied, service error, not audio), produced by the inference service (COA-16) | OAM-5 | OAM-8 (each met, or not verified when the user cannot reproduce it) |
 | COA-7 one message per failure cause — shown on the page | OAM-7 | OAM-6 |
-| COA-8 no fallback to Google | OAM-5 | OAM-4 |
-| COA-9 configurable time limit, default 1200 s, timed-out message | OAM-5 | OAM-4 |
-| COA-10 cloned generations in history, downloadable, deletable, 30-day retention | OAM-5 | OAM-4 |
+| COA-8 no fallback to Google — on the four pre-call causes | OAM-5 | OAM-4 |
+| COA-8 no fallback to Google — on the five call-time causes (COA-16) | OAM-5 | OAM-8 |
+| COA-9 configurable time limit, default 1200 s, bounding the call; timed-out message (COA-16) | OAM-5 | OAM-8 (a limit the user sets produces the timed-out message naming it, or is recorded as not verified); Final Review inspection of the 1200 s default |
+| COA-10 cloned generations in history, downloadable, deletable, 30-day retention (COA-16) | OAM-5 | OAM-8 |
 | COA-11 voices and samples survive restart; deleted 5 days after upload | OAM-3 | OAM-2 |
-| COA-12 automatic approval kept; clonable straight away | OAM-3 | OAM-2 |
+| COA-12 automatic approval kept; clonable straight away | OAM-3 | OAM-2 (approved and sample available straight away); OAM-8 (a new voice clones) |
 | COA-13 a request that arrives during a generation waits | OAM-5 | OAM-4 |
 | COA-13 Generate button disabled during a generation | OAM-7 | OAM-6 |
 | COA-13 no other duplicate prevention added | none — exclusion | Final Review |
 | COA-14 mock, Google and Azure providers and their tests unchanged; Google narration as before apart from the cap | none — preserved | OAM-5 (preserved tests listed in OAM-4) and OAM-7 (full frontend suite) |
 | COA-15 shared voice list | OAM-3 | OAM-2 |
-| COA-16 automated tests use a fake Chatterbox with no network | OAM-4 | Final Review |
-| COA-16 final check is the user's manual test on Cloud Run | OAM-8 | OAM-8 |
+| COA-16 automated tests neither fake nor call Chatterbox | none — exclusion | Final Review |
+| COA-16 everything that needs a Chatterbox call is checked only in the user's manual Cloud Run test; a cause the user cannot reproduce is recorded as not verified | OAM-8 | OAM-8 |
 | COA-17 no text cap, sent whole, plain count, warnings and label removed | OAM-7 | OAM-6 |
+| COA-17 the inference service sends the text whole and unsplit to Chatterbox (needs a Chatterbox call, COA-16) | OAM-5 | OAM-8 |
 | COA-17 the cap tests and test mock change to match | OAM-6 | Final Review |
 | CON-1 only Chatterbox runs on GCP | none — exclusion | Final Review |
 | CON-2 no local Docker build or container, no `gcloud` | none — exclusion | Final Review |
 | CON-3 deployed Chatterbox used unchanged | none — exclusion | Final Review |
 | CON-4 Chatterbox stays a separate service | none — exclusion | Final Review |
-| CON-5 call the deployed service with the identity token for the named account and audience, in its request and response form | OAM-5 | OAM-4 |
+| CON-5 call the deployed service with the identity token for the named account and audience, in its request and response form (needs a Chatterbox call, COA-16) | OAM-5 | OAM-8 |
 | CON-6 voice samples, `service-account-key.json` and `.env` never committed | none — exclusion | Final Review |
 | Exclusion: copying the Chatterbox service source into this branch | none — exclusion | Final Review |
 | Exclusion: changing or redeploying the deployed Chatterbox | none — exclusion | Final Review |
@@ -319,13 +340,13 @@ The Business Context rules restate COA-5, COA-11, COA-12 and COA-17 and are trac
 | ID | Command (run from the repository root unless stated) | Use | Source |
 | --- | --- | --- | --- |
 | OAV-1 | `python -m pytest <test files> -q` | Scoped backend runs (RED and dry runs) | `pytest.ini` (`testpaths = tests`, `pythonpath = .`); `requirements-dev.txt` (`pytest==9.1.1`) |
-| OAV-2 | `python -m pytest -q` | Full backend suite, once per backend GREEN execution and at OAM-7. Pre-existing: the `tests/test_voice_enrollment.py` timeout and one `tests/test_real_model_inference.py` failure | `pytest.ini`; pre-existing failures named by the user (create-plan arguments, 2026-11-13) |
+| OAV-2 | `python -m pytest -q --ignore=tests/test_persistence.py --ignore=tests/test_authentication_consent.py --ignore=tests/test_voice_enrollment.py` | The backend suite, once per backend GREEN execution and at OAM-7. Wherever this Plan says "full backend suite" or "backend suite", this run is meant: the three Docker-dependent files are left out (V3Q-3, CON-2). Pre-existing: one `tests/test_real_model_inference.py` failure (`test_production_inference_module_missing`); the `tests/test_voice_enrollment.py` timeout is in a left-out file | `pytest.ini`; pre-existing failures named by the user (create-plan arguments, 2026-11-13); user decision V3Q-3 (`002_Implementation_Plan_OAM-3.md:736`); OAM-3 revision 4 GREEN evidence (82 tests collected, the one failure) |
 | OAV-3 | `git status --short -- audio_storage` must print nothing; if it does, `git checkout -- audio_storage` then `git clean -fd -- audio_storage` | After every backend test run | User constraint (create-plan arguments, 2026-11-13); planning run evidence (Current State) |
 | OAV-4 | `npm ci` (in `frontend/`) | Before any frontend test run in a fresh worktree; changes no tracked file | `frontend/package.json`, `frontend/package-lock.json` |
 | OAV-5 | `npx vitest run` (in `frontend/`); scoped: `npx vitest run tests/tts.spec.tsx -t "<test name>"` | Frontend tests. Baseline: `Tests 90 failed / 263 passed (353)` (Current State) | `frontend/package.json` (`"test": "vitest"`), `frontend/vitest.config.ts` |
 | OAV-6 | `npm run type-check` (in `frontend/`) | OAM-6 and OAM-7; passes at baseline | `frontend/package.json` (`"type-check": "tsc --noEmit"`) |
 
-No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recorded in its Implementation Plan. Output is written to log files, and only summaries and failing tests are recorded (`prompt-driven-development` Test Scope and Output).
+No verification command uses Docker or `gcloud` (CON-2), and no automated test fakes or calls Chatterbox (COA-16). OAM-8's steps are recorded in its Implementation Plan. Output is written to log files, and only summaries and failing tests are recorded (`prompt-driven-development` Test Scope and Output).
 
 ## Execution Status
 
@@ -334,7 +355,7 @@ No verification command uses Docker or `gcloud` (CON-2). OAM-8's steps are recor
 | OAM-1 Local service contract (CONTRACT) | Complete | `docs/.ai/chatterbox-original-app/API-Contract.md`, Approved by Avinash Srivastava on 2026-11-13 |
 | OAM-2 Voice service RED | Complete — valid RED established 2026-11-13 | `001_Implementation_Plan_OAM-2.md`; see OAM-2 RED evidence below |
 | OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
-| OAM-4 Inference service RED | Pending | — |
+| OAM-4 Inference service RED | Pending | Revised scope (Plan revision of 2026-11-13); `003_Implementation_Plan_OAM-4.md` is superseded and not executed; a new Implementation Plan is required |
 | OAM-5 Inference service GREEN | Pending | — |
 | OAM-6 TTS page RED | Pending | — |
 | OAM-7 TTS page GREEN | Pending | — |
@@ -436,29 +457,32 @@ Executed 2026-11-13 at HEAD `b4ba5fa`, which differs from the plan's `6703cf0` o
 ## Risks
 
 - **OAR-1 Tests write to tracked `audio_storage/`.** `tests/test_generation_history_download.py:18` builds an app over the default storage root (`voice_narration/inference/application.py:87-89`). The planning run modified `audio_storage/generation_index.json` and added a folder. Mitigation: OAV-3 after every backend run; new tests in OAM-2 and OAM-4 keep their own storage out of `audio_storage/`.
-- **OAR-2 Cloned-generation retention is recorded only in the database, and failures there are ignored.** The expiry is written inside a block that swallows database errors (`voice_narration/inference/application.py:150-179`), and the database defaults to a local PostgreSQL instance (`voice_narration/inference/db.py:19-28`). Mitigation: the OAM-4 Implementation Plan shows how its test observes the 30-day expiry without a running PostgreSQL instance, as OAC-11 defines it.
+- **OAR-2 Cloned-generation retention is recorded only in the database, and failures there are ignored.** The expiry is written inside a block that swallows database errors (`voice_narration/inference/application.py:150-179`), and the database defaults to a local PostgreSQL instance (`voice_narration/inference/db.py:19-28`). Under COA-16 a cloned generation's retention needs a Chatterbox call, so no automated test observes it. Mitigation: the OAM-8 Implementation Plan states how the user observes the 30-day expiry of a cloned generation, as OAC-11 defines it. If the user cannot observe it, that case is not met and is reported for replanning (OAM-8 exclusions); the not-verified result applies only to the five failure causes.
 - **OAR-3 Long generations held on one request.** The page waits on a single request for the whole generation (`frontend/src/services/ttsApi.ts:42-59`), and the inference service generates inside that request (`voice_narration/inference/application.py:438-479`). A Chatterbox call may last up to 1200 s, plus any wait (COA-9, COA-13). Mitigation: OAC-9 in OAM-1 defines how the page receives a long generation's result; OAM-8 exercises real cold starts.
 - **OAR-4 Undeclared libraries.** The Google provider's client library and the Google authentication library, and the async test support used by the existing tests, are installed in the inspected environment but not declared in `requirements-dev.txt` (Current State). Mitigation: the OAM-4 and OAM-5 Implementation Plans name each installed library they rely on, and any declaration change, for review.
 - **OAR-5 Hand-written multipart parsing in the voice service.** Upload extracts file bytes by splitting on line breaks (`voice_narration/simple_voices/application.py:83-103`), so a stored sample could differ from the uploaded bytes. Mitigation: OAM-2 verifies that a WAV upload's stored sample is byte-identical to the upload.
 - **OAR-6 Pre-existing frontend failures overlap the cap tests.** M3.3.2 and M3.3.5, two of the label tests COA-17 changes, already fail because the test mock does not serve the provider list the page reads (Current State). Changing them cannot by itself give valid RED evidence. Mitigation: OAM-6 also checks the label's absence with a test that reaches the provider list. The named failures are treated as the user decides before each frontend Implementation Plan is approved (Non-Blocking Open Decisions).
 - **OAR-7 Platform limits in front of Chatterbox.** The reference contract states that Cloud Run may answer on its own, for example when its request time limit is reached (reference contract, Inference Job Creation, failure reason table). Its configured limit is outside this work item (CON-3). Mitigation: such an answer is reported by the OAC-5 message for its cause; OAM-8 records any case it affects.
+- **OAR-8 Local settings files could give a test a path to a real Chatterbox call.** The inference service loads `.env`, `.env.local` and `.env.production` from the repository root when they exist (`voice_narration/inference/db.py:14-16`). For OAM-8 the user supplies such settings, including the Chatterbox URL and the key (CON-6). A test that picked them up could call the deployed Chatterbox, which COA-16 forbids, or could miss the not-configured and identity-token-unavailable answers it checks. Mitigation: the OAM-4 Implementation Plan shows, for each new test, how the settings in effect leave no path to a Chatterbox call (OAM-4 exclusions).
+- **OAR-9 The behavior that needs a Chatterbox call has no automated test.** By COA-16, OAM-5 delivers the call, the five call-time causes, the time limit on the call, and cloned-generation history and retention, and no RED test drives them. A defect in them shows only at OAM-8. A later regression would not be caught by any automated test, and a cause the user cannot reproduce stays not verified (COA-16, AC-6). Mitigation: the OAM-5 Implementation Plan shows this behavior as exact code for review, mapped to the contract's Inference Service Chatterbox Call and Chatterbox Failure Causes. OAM-8 runs a case for each item, and Final Review inspects the 1200-second default.
+- **OAR-10 The three V3Q-3 files are not run.** `tests/test_persistence.py`, `tests/test_authentication_consent.py` and `tests/test_voice_enrollment.py` are left out of every backend-suite run (OAV-2, V3Q-3), so a regression in what they cover would not show. Mitigation: none of them references the inference service, the voice service this work item changes, or the frontend (Current State, revision inspection). Every milestone keeps its changes within the services and page its scope names.
 
 ## Final Acceptance Criteria
 
 | Criterion | Source | Demonstrated by |
 | --- | --- | --- |
-| AC-1 On `/tts` the user can choose Google or Chatterbox, and the generation uses the chosen provider | requirements AC-1 | OAM-7 (page sends the choice) and OAM-5 (service uses it) |
+| AC-1 On `/tts` the user can choose Google or Chatterbox, and the generation uses the chosen provider | requirements AC-1 | OAM-7 (page sends the choice); OAM-5 (service uses it, shown by the OAM-4 tests without a Chatterbox call); OAM-8 (a Chatterbox generation is produced by Chatterbox) |
 | AC-2 A Chrome recording or WAV upload has its sample stored by the voice service | requirements AC-2 | OAM-3 |
 | AC-3 With Chatterbox chosen, recorded and uploaded voices are listed and selectable | requirements AC-3 | OAM-7 |
-| AC-4 A Chatterbox generation for a Chrome-recorded or WAV-uploaded voice plays on the TTS page, and the user hears the selected voice in the manual Cloud Run check | requirements AC-4 | OAM-5 and OAM-7 (automated, fake Chatterbox); OAM-8 (manual) |
-| AC-5 English or Hindi can be chosen for Chatterbox, and the chosen language is used | requirements AC-5 | OAM-7 and OAM-5 (automated); OAM-8 (heard) |
-| AC-6 Each of the nine causes produces its own message ending "Please retry, or choose another provider.", shown by automated tests against a fake Chatterbox | requirements AC-6 | OAM-5 (messages) and OAM-7 (shown on the page) |
-| AC-7 When Chatterbox fails, no Google audio is produced | requirements AC-7 | OAM-5 |
-| AC-8 The time limit is configurable, default 1200 s; exceeding it produces the timed-out message | requirements AC-8 | OAM-5 |
-| AC-9 A cloned generation appears in history, can be downloaded and deleted, and has 30-day retention | requirements AC-9 | OAM-5 |
+| AC-4 A Chatterbox generation for a Chrome-recorded or WAV-uploaded voice plays on the TTS page, and the user hears the selected voice in the manual Cloud Run check | requirements AC-4 | OAM-7 (audio the inference service returns plays on the page); OAM-8 (cloned speech for a Chrome-recorded and a WAV-uploaded voice, heard by the user) |
+| AC-5 English or Hindi can be chosen for Chatterbox, and the chosen language is used | requirements AC-5 | OAM-7 (chosen and sent); OAM-5 (only English or Hindi taken, shown by the OAM-4 tests); OAM-8 (the chosen language heard) |
+| AC-6 Each of the nine causes produces its own message ending "Please retry, or choose another provider."; automated tests, with no Chatterbox call, show it for not configured, invalid time-limit setting, voice sample unreadable and identity token unavailable; the manual Cloud Run test shows it for timed out, cannot connect, access denied, service error and not audio where the user can reproduce them, and records any it does not reproduce as not verified | requirements AC-6 | OAM-5 (the four pre-call messages, shown by the OAM-4 tests); OAM-8 (the five call-time messages, each met or recorded as not verified); OAM-7 (shown on the page) |
+| AC-7 When Chatterbox fails, no Google audio is produced | requirements AC-7 | OAM-5 (on the four pre-call causes, shown by the OAM-4 tests); OAM-8 (on each call-time cause the user reproduces) |
+| AC-8 The time limit is configurable, default 1200 s; exceeding it produces the timed-out message | requirements AC-8 | OAM-8 (a limit the user sets produces the timed-out message naming it, or is recorded as not verified); Final Review inspection of the 1200 s default |
+| AC-9 A cloned generation appears in history, can be downloaded and deleted, and has 30-day retention | requirements AC-9 | OAM-8 |
 | AC-10 Voices and samples survive a restart and are deleted 5 days after upload | requirements AC-10 | OAM-3 |
 | AC-11 Mock, Google and Azure and their existing tests pass unchanged; Google narration behaves as before apart from the cap | requirements AC-11 | OAM-5 (preserved backend tests) and OAM-7 (full frontend suite); Final Review inspection that those tests are unchanged |
-| AC-12 A request made during a generation waits and then completes; the Generate button is disabled during a generation | requirements AC-12 | OAM-5 (waits) and OAM-7 (disabled button) |
-| AC-13 For every provider, text over 5000 characters is kept and sent whole, unsplit; the count reads "n characters"; no "/ 5000", 90% warning, maximum-reached message or "Max 5000 chars/request" label | requirements AC-13 | OAM-7 |
+| AC-12 A request made during a generation waits and then completes; the Generate button is disabled during a generation | requirements AC-12 | OAM-5 (waits, shown by the OAM-4 tests without a Chatterbox call) and OAM-7 (disabled button) |
+| AC-13 For every provider, text over 5000 characters is kept and sent whole, unsplit; the count reads "n characters"; no "/ 5000", 90% warning, maximum-reached message or "Max 5000 chars/request" label | requirements AC-13 | OAM-7; OAM-8 (a Chatterbox generation of text over 5000 characters is spoken whole) |
 | OAS-1 Tracked `audio_storage/` files are unchanged at the end of every milestone | User constraint (create-plan arguments, 2026-11-13) | OAV-3 evidence at OAM-2–OAM-7; Final Review inspection |
-| OAS-2 Every full-suite run at OAM-3, OAM-5 and OAM-7 fails only on the pre-existing failures named in Current State | Plan; `implementation-planning` Pre-existing Failures | OAM-3, OAM-5, OAM-7 |
+| OAS-2 Every backend-suite run (OAV-2, without the three V3Q-3 files) at OAM-3, OAM-5 and OAM-7, and every full frontend-suite run at OAM-7, fails only on the pre-existing failures named in Current State | Plan; `implementation-planning` Pre-existing Failures; user decision V3Q-3 | OAM-3, OAM-5, OAM-7 |
