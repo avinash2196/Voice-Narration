@@ -359,7 +359,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
 | OAM-6 TTS page RED | Complete — valid RED established 2026-11-14 | `006_Implementation_Plan_OAM-6.md` revision 2; see OAM-6 RED evidence (revision 2) below (the earlier stopped run is kept below) |
 | OAM-7 TTS page GREEN | Complete — GREEN verified 2026-11-14 | `007_Implementation_Plan_OAM-7.md`; see OAM-7 GREEN evidence below |
-| OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
+| OAM-8 Cloud Run manual validation (OTHER) | Waiting — manual check from user | `008_Implementation_Plan_OAM-8.md`; see OAM-8 manual validation evidence below |
 
 ### OAM-2 RED evidence
 
@@ -566,6 +566,41 @@ Executed 2026-11-14 at HEAD `cb394ab`, which differs from the plan's `a909fd2` o
 - Pre-authorized contingencies: none listed and none applied.
 - Deviations: none in the planned commands, which ran as written, one at a time, in order. Commands 4a and 5b ran in the background. Each next command started only after the previous one had exited and its output had been read. Two read-only checks were added: `git diff --stat a909fd2 HEAD`, because HEAD is `cb394ab`, and a `grep` of the backend log for the accepted failure's `ImportError` line, because the raw `FAILED` line carries no reason suffix.
 - Processes: both background jobs exited. No process started by this run is still running.
+
+### OAM-8 manual validation evidence
+
+Protocol: `008_Implementation_Plan_OAM-8.md`, Validation Protocol. The user runs it by hand and fills in the last three columns. A Result is `met` or `not met`; for M8-8 to M8-12 it may also be `not verified`. Message text is written exactly as the page shows it. Nothing in this table holds a key, a password, a token, a database URL or a voice sample.
+
+| Case | Checked | Setting change from the start settings (M8P-4) | Voice on `/tts` | Language | What the user saw or heard | History total before → after | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| M8-1 | One instance of each local service; the deployed service is the unchanged one at the CON-5 URL and was not redeployed for this check | none | — | — | | — | |
+| M8-2 | S-1: Chrome recording, English | none | OAM8 Chrome | English | | | |
+| M8-3 | S-1: Chrome recording, Hindi | none | OAM8 Chrome | Hindi | | | |
+| M8-4 | S-2: WAV upload, English | none | Unnamed Voice (newest) | English | | | |
+| M8-5 | S-2: WAV upload, Hindi | none | Unnamed Voice (newest) | Hindi | | | |
+| M8-6 | Text over 5000 characters, spoken whole | none | OAM8 Chrome | English | | | |
+| M8-7 | Cloned generation in history, downloaded, 30-day retention, deleted | none | OAM8 Chrome | English | | | |
+| M8-8 | OAF-5 timed out | `CHATTERBOX_TIMEOUT_SECONDS` = `3` | OAM8 Chrome | English | | | |
+| M8-9 | OAF-6 cannot connect | `CHATTERBOX_URL` = `https://127.0.0.1:1` | OAM8 Chrome | English | | | |
+| M8-10 | OAF-7 access denied | `GOOGLE_APPLICATION_CREDENTIALS` = `$HOME\oam8-private\other-account-key.json` | OAM8 Chrome | English | | | |
+| M8-11 | OAF-8 service error | `CHATTERBOX_URL` = the CON-5 URL followed by `/oam8-no-such-path` | OAM8 Chrome | English | | | |
+| M8-12 | OAF-9 not audio | none (M8D-6) | — | — | | — | |
+
+#### Executor pre-check evidence (steps 1–4)
+
+Executed 2026-11-14 in Git Bash from the worktree root, at HEAD `0725057` (the plan's `60a9192` plus commit `0725057`, which adds only `008_Implementation_Plan_OAM-8.md`). Step 1: the plan's Human Review records approval on 2026-11-14 and M8Q-1 is answered (a).
+
+| Check | Command (as run) | Output |
+| --- | --- | --- |
+| M8V-1 | `git diff --stat 60a9192 HEAD -- . ':(exclude)docs/.ai'; git diff --stat -- . ':(exclude)docs/.ai'` | nothing (M8C-1: code is the OAM-7 code) |
+| M8V-2 | `ls -a \| grep -E '^\.env(\.local\|\.production)?$'; netstat -ano \| grep -E ':(8002\|8003\|5173) .*LISTEN'; echo "ports exit $?"` | no `.env` line; `ports exit 1` (M8C-1: no root env file, ports free) |
+| Step 3 hash | `sha256sum docs/.ai/chatterbox-original-app/Plan.md` | `e401dd722d441a186b2b8f1b01afbd5e0c400b563e72c991ba5b8aa7c5c4c7d4` (matches the plan) |
+| Step 3 apply | the plan's `Plan.md` diff, extracted to a scratchpad file, then `git apply --check` and `git apply` | check OK; applied |
+| M8V-3 | `sha256sum docs/.ai/chatterbox-original-app/Plan.md; git diff --numstat -- docs/.ai/chatterbox-original-app/Plan.md` | `bf4dc09f81de33e467ba49330396777a1b95715a19ba4c770ebb8987b9ddedf9`; `20	1	docs/.ai/chatterbox-original-app/Plan.md` (both as expected) |
+
+- Deviations: none in the planned commands. The diff was taken verbatim from the plan's `diff` block into a scratchpad file so `git apply` could read it. One read-only check was added: `git show --stat 0725057`, because HEAD is `0725057`; it lists only `008_Implementation_Plan_OAM-8.md`.
+- Not run by the executor (the user's, per step 4): the services, Chrome, the key, any Chatterbox call, the `DATABASE_URL` prompts. M8V-4, M8V-5 and the second M8V-1 run at step 5.
+- Processes: none started.
 
 ## Risks
 
