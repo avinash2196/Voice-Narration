@@ -1,0 +1,28 @@
+{
+  "steps": [
+    {
+      "id": "use-chatterbox-ignore-file",
+      "name": "gcr.io/cloud-builders/docker",
+      "entrypoint": "cp",
+      "args": [
+        "cloudrun/chatterbox-service/Dockerfile.dockerignore",
+        ".dockerignore"
+      ]
+    },
+    {
+      "id": "build-image",
+      "name": "gcr.io/cloud-builders/docker",
+      "args": [
+        "build",
+        "--file",
+        "cloudrun/chatterbox-service/Dockerfile",
+        "--tag",
+        "asia-southeast1-docker.pkg.dev/$PROJECT_ID/chatterbox/chatterbox-model-api:$_TAG",
+        "."
+      ]
+    }
+  ],
+  "images": [
+    "asia-southeast1-docker.pkg.dev/$PROJECT_ID/chatterbox/chatterbox-model-api:$_TAG"
+  ]
+}
