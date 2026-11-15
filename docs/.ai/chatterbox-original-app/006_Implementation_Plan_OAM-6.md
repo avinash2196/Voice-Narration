@@ -15,14 +15,14 @@ RED. `Plan.md` records OAM-6 as RED with no preceding FOUNDATION milestone (Mile
 - Files: created `frontend/tests/tts-provider-choice.spec.tsx`; modified `frontend/tests/tts.spec.tsx` (M3.1.2, M3.1.6, M3.1.7, M3.1.8, M3.3.2, M3.3.5) and `frontend/tests/mocks/tts-handlers.ts` (the 5000-character rejection removed); deleted none.
 - Tests added: 19 (10 tests, 2 parametrized). They prove that the page offers only Google and Chatterbox and names the provider in the request; that it lists only recorded and uploaded voices for Chatterbox; that it offers and sends English or Hindi; that it shows each of the nine Chatterbox failure messages; that it plays a finished Chatterbox generation; that it keeps Generate disabled while a generation runs; and that it keeps and sends long text whole with a plain count and no limit label. The inference and voice services are mocked; nothing fakes or calls Chatterbox.
 - Verification: `npx vitest run tests/tts-provider-choice.spec.tsx`, then `npx vitest run tests/tts.spec.tsx` (in `frontend/`). Expected / Predicted — Not Yet Verified: `19 failed (19)`, then `31 failed | 63 passed (94)`, where the 31 are the 27 named pre-existing failures plus the 4 changed M3.1 tests.
-- Needs attention: T6Q-1 is answered (a): exactly the 27 named pre-existing `tts.spec.tsx` failures are accepted. Also decisions T6D-3 to T6D-7, the page seams that bind OAM-7, and T6R-1: three Chatterbox tests fail at RED on the missing Chatterbox voice list, because their display code already exists.
+- Needs attention: T6Q-1 is answered (a): exactly the 27 named pre-existing `tts.spec.tsx` failures are accepted. Also decisions T6D-3 to T6D-7, the page seams that bind OAM-7, and T6R-1: three Chatterbox tests fail at RED on the missing Chatterbox voice list, because their display code already exists. Revision 2 (after the stopped run): only the stated baseline cause of the 10 history tests (T6C-6, command 4's last check, Current Repository State) and the order of commands 3 and 4 (Execution Step 5) change; see Revision 2 Changes.
 
 ## Authoritative References
 
 | Document | Status read |
 | --- | --- |
 | `docs/.ai/chatterbox-original-app/requirements.md` | "Approved by Avinash Srivastava on 2026-11-13 (revision recording Q46–Q48 …)" |
-| `docs/.ai/chatterbox-original-app/Plan.md` | Status "Approved by Avinash Srivastava on 2026-11-13, as written …". Execution Status: OAM-1 to OAM-5 complete, OAM-6 `Pending` |
+| `docs/.ai/chatterbox-original-app/Plan.md` | Status "Approved by Avinash Srivastava on 2026-11-13, as written …". Execution Status: OAM-1 to OAM-5 complete, OAM-6 `Pending`. Re-read for revision 2: OAM-6 is `Blocked`, with "OAM-6 stopped execution evidence" (test files rolled back); Status unchanged |
 | `docs/.ai/chatterbox-original-app/API-Contract.md` | Contract Review Status "Approved by Avinash Srivastava on 2026-11-13, as written". The OAM-1 row in `Plan.md` Execution Status is Complete and points to it. It is the authoritative predecessor for the request and answer shapes the tests mock |
 | `docs/.ai/chatterbox-original-app/001_Implementation_Plan_OAM-2.md` | "Executed on 2026-11-13; valid RED established … (Approved … including decisions V2D-1 to V2D-6.)" Review Summary and Carried-Forward Decisions read |
 | `docs/.ai/chatterbox-original-app/002_Implementation_Plan_OAM-3.md` | "Revision 4 approved … Executed 2026-11-13". Review Summary and Carried-Forward Decisions read |
@@ -43,7 +43,7 @@ No earlier plan decided anything about the frontend, its test tooling or the TTS
 ## Preconditions / Predecessor Evidence
 
 - OAM-5 is complete: "Complete — GREEN verified 2026-11-13" (`Plan.md`, Execution Status). Its evidence records the inference service answering `provider` and `language`, listing `chatterbox`, and the four pre-call `503` messages (`Plan.md`, OAM-5 GREEN evidence, commands 2–3). Those are the answers these tests mock.
-- HEAD is `ce598d4` ("Add Chatterbox generation to the inference service (OAM-5)"). `git status --short` printed nothing at planning time. `git diff --stat ce598d4 -- frontend` is empty, so no frontend file has changed since the Plan's Current State, which was inspected at `664cee4` (`Plan.md:46`).
+- HEAD is `ce598d4` ("Add Chatterbox generation to the inference service (OAM-5)"). `git status --short` printed nothing at planning time. `git diff --stat ce598d4 -- frontend` is empty, so no frontend file has changed since the Plan's Current State, which was inspected at `664cee4` (`Plan.md:46`). Revision 2: HEAD is `b8704a6`, and `git diff --stat ce598d4 b8704a6` lists only this plan; `git status --short -- frontend` printed nothing (2026-11-14).
 - OAM-6 is `Pending`, and no Implementation Plan for OAM-6 exists in the folder (`ls docs/.ai/chatterbox-original-app/`: `001`–`005`, `API-Contract.md`, `Plan.md`, `requirements.md`).
 - Prerequisites (Plan Content Rule 11) are present. The lockfile installs vitest 1.6.1, jsdom 23.2.0, @testing-library/react 16.3.3, @testing-library/user-event 14.6.8 and msw 1.3.5 (`npm ls`). msw 1.3.5 intercepts `fetch` in Node: `node_modules/msw/lib/node/index.js` uses `FetchInterceptor`. No dependency or configuration change is needed.
 - Baseline (planning-time observation on the unmodified tree, HEAD `ce598d4`, 2026-11-13):
@@ -63,7 +63,7 @@ The facts the exact code depends on:
 - Generate is `data-testid="generate-button"` and is disabled while a submission is pending (`frontend/src/components/GenerationSubmitForm.tsx:133`, `:139`).
 - The player sets the audio element's `src` to the object URL (`frontend/src/components/AudioPlayer.tsx:20`, `:68`, `:70`).
 - Test setup: one msw server per test file, `server.listen()` with no unhandled-request option (`frontend/tests/mocks/setup.ts:7`), so msw warns about unmatched requests and sends them to the network. `URL.createObjectURL` is stubbed when jsdom lacks it (`setup.ts:107-108`). `tests/` is not covered by `npm run type-check`, because `frontend/tsconfig.json` includes only `src`.
-- `tts.spec.tsx` registers only `ttsHandlers` (`frontend/tests/tts.spec.tsx:56-58`). Those serve `/generate`, `/providers` and `/voices` on port 8003 (`frontend/tests/mocks/tts-handlers.ts:18-242`), not the endpoints the page calls. That is the observed cause of the 27 `tts.spec.tsx` failures: the provider selector renders `provider-error` "fetch failed" (baseline log, M3.3.2 and M3.3.5). The default handler's 5000-character rejection is at `tts-handlers.ts:27-29`. Only `tts.spec.tsx` imports `tts-handlers.ts` (`grep -rn "tts-handlers" frontend/tests`).
+- `tts.spec.tsx` registers only `ttsHandlers` (`frontend/tests/tts.spec.tsx:56-58`). Those serve `/generate`, `/providers` and `/voices` on port 8003 (`frontend/tests/mocks/tts-handlers.ts:18-242`), not the endpoints the page calls. That is the observed cause of the 27 `tts.spec.tsx` failures. In 17 of them a selector renders `provider-error` or `voice-selector-error` "fetch failed" (baseline log, for example M3.3.2 and M3.3.5). In the other 10 (M3.7.1–M3.7.7, M3.11.3, M3.11.5, M3.12.5) the history fetch fails: `GenerationHistory.tsx:35-36` catches it and logs `Failed to fetch history: [TypeError: fetch failed]` (cause `ECONNREFUSED`) on stderr, and the component shows `data-testid="empty-state"` "No generations yet" (`:120-121`) instead of `generation-history-container` (`:130`) (revision 2 baseline, Planning-Time Dry Run). The default handler's 5000-character rejection is at `tts-handlers.ts:27-29`. Only `tts.spec.tsx` imports `tts-handlers.ts` (`grep -rn "tts-handlers" frontend/tests`).
 - The contract's provider list is `azure`, `chatterbox`, `google`, `mock`. The page can send only `google` or `chatterbox` as `provider`. The Chatterbox display name is "Chatterbox voice cloning" (`API-Contract.md`, Inference Provider List). The repository's descriptions for the others are at `voice_narration/inference/application.py:384-388`. Preloaded voices carry `"provider": "google"`, and recorded and uploaded voices have no `provider` (`API-Contract.md`, Voice List; `voice_narration/simple_voices/application.py:19-65`).
 
 ## Files in Scope
@@ -797,7 +797,7 @@ Run in Git Bash from the repository root unless a step says `frontend/`. Logs go
    `sed -n '751,765p' "$P" | tr -d '\r' > "$TEMP/oam6-handlers.diff"`
    `sha256sum frontend/tests/tts-provider-choice.spec.tsx "$TEMP/oam6-spec.diff" "$TEMP/oam6-handlers.diff"` must print `de6f2493c63f319ec9c6a71eab2b1988b069d35b222211f3a361058c3fd22a24`, `9caf63cbd00ce1cbac9abe22328f4146d06acd89c347be5139e95ceb07caeb8e` and `c40a40590f11f7ed2b38f4f4a0207789796e12053bc2928a3403f9c4eec84982`. Otherwise delete the new file and stop.
 4. `git apply --check "$TEMP/oam6-spec.diff" && git apply "$TEMP/oam6-spec.diff"`, then the same for `"$TEMP/oam6-handlers.diff"`. If a check fails, revert this milestone's files (Rollback / Recovery) and stop.
-5. Run commands 2–6 in order. Run commands 3 and 4 in the background, and read their logs when they finish.
+5. Run commands 2–6 in order, one at a time. Commands 3 and 4 may run in the background, but command 4 starts only after command 3 has exited and its log has been read. No two commands run at the same time (T6D-9, Revision 2 Changes).
 6. Record the evidence in `Plan.md` below the Execution Status table, and set the OAM-6 row. Change nothing else in `Plan.md`.
 
 ## Acceptance / Completion Criteria
@@ -817,7 +817,11 @@ Criteria limiting which files may change exclude this milestone's Execution Stat
   No failure comes from an import, a transform, an unhandled request (the `afterEach` check), or an msw warning.
 - **T6C-4 Changed cap tests fail for the missing behavior.** In `tts.spec.tsx`, M3.1.2, M3.1.7 and M3.1.8 fail because the count is not "`<n>` characters", and M3.1.6 fails because the text is truncated.
 - **T6C-5 M3.3.2 and M3.3.5 keep their pre-existing failure.** Each fails because the provider selector shows `provider-error` "fetch failed", as on the baseline. They are recorded as pre-existing, not as RED evidence (`Plan.md` OAM-6 Success criteria, OAR-6).
-- **T6C-6 Other `tts.spec.tsx` tests keep their baseline result.** Per T6Q-1 (a), the 27 named pre-existing failures (Answered Questions) are accepted only when each fails for its baseline cause, the selectors' "fetch failed"; any other failure fails the milestone. Every other `tts.spec.tsx` test passes, as on the baseline.
+- **T6C-6 Other `tts.spec.tsx` tests keep their baseline result.** Per T6Q-1 (a), the 27 named pre-existing failures (Answered Questions) are accepted only when each fails for its baseline cause; any other failure fails the milestone. The baseline cause is one of two, re-observed on the unmodified tree at HEAD `b8704a6` (revision 2 baseline, Planning-Time Dry Run):
+  - the selectors' "fetch failed", for M3.2.1–M3.2.7, M3.3.1–M3.3.6, M3.11.1, M3.11.2, M3.12.1 and M3.12.7 (17): the test's `FAIL` section shows `fetch failed` and `data-testid="provider-error"` or `data-testid="voice-selector-error"`;
+  - the history fetch's "fetch failed", for M3.7.1–M3.7.7, M3.11.3, M3.11.5 and M3.12.5 (10): the test's first error is `Unable to find an element by: [data-testid="generation-history-container"]`, its `FAIL` section shows `data-testid="empty-state"` ("No generations yet"), and the test logs `Failed to fetch history: [TypeError: fetch failed]` on stderr. The history component catches the error (`GenerationHistory.tsx:35-36`), so `fetch failed` does not appear in these tests' `FAIL` sections.
+
+  Every other `tts.spec.tsx` test passes, as on the baseline.
 - **T6C-7 No test fakes or calls Chatterbox, and no request leaves the test process** (COA-16). Shown by the code (no handler for any Chatterbox URL, and the catch-all) and by the `afterEach` check passing, so no failure names `unexpected request`.
 
 ## Answered Questions
@@ -899,7 +903,11 @@ LIST
    `echo "unexpected:"; LC_ALL=C comm -13 "$TEMP/oam6-tts-accepted.txt" "$TEMP/oam6-tts-failed.txt"; echo "accepted, not failing:"; LC_ALL=C comm -23 "$TEMP/oam6-tts-accepted.txt" "$TEMP/oam6-tts-failed.txt"`
    `for t in "M3.3.2:" "M3.3.5:"; do printf '%s fetch failed => ' "$t"; awk -v t="$t" '$0 ~ "^ FAIL .*> "t {p=1;n=0} p{print;n++} n>60{p=0}' "$TEMP/oam6-red-tts.txt" | grep -c "fetch failed"; done` → each at least `1`
    `for t in "M3.1.2:" "M3.1.6:" "M3.1.7:" "M3.1.8:"; do printf '%s => ' "$t"; awk -v t="$t" '$0 ~ "^ FAIL .*> "t {getline; print; exit}' "$TEMP/oam6-red-tts.txt" | cut -c1-80; done`
-   For each of the other 25 named failures, its `FAIL` section must show `fetch failed` or the selector's error state, which is the baseline cause.
+   Then check the other 25 named failures for their baseline cause (T6C-6). The 15 that fail on a selector's fetch:
+   `for t in M3.2.1 M3.2.2 M3.2.3 M3.2.4 M3.2.5 M3.2.6 M3.2.7 M3.3.1 M3.3.3 M3.3.4 M3.3.6 M3.11.1 M3.11.2 M3.12.1 M3.12.7; do s=$(awk -v t="$t:" '/^ FAIL / {p=(index($0,"> " t)>0); next} /Test Files/ {p=0} p' "$TEMP/oam6-red-tts.txt"); printf '%s: fetch-failed=%s error-id=%s\n' "$t" "$(printf '%s\n' "$s" | grep -c 'fetch failed')" "$(printf '%s\n' "$s" | grep -cE 'data-testid="(provider|voice-selector)-error"')"; done` → 15 lines, each with `fetch-failed` and `error-id` at least `1`
+   The 10 that fail on the history fetch:
+   `for t in M3.7.1 M3.7.2 M3.7.3 M3.7.4 M3.7.5 M3.7.6 M3.7.7 M3.11.3 M3.11.5 M3.12.5; do s=$(awk -v t="$t:" '/^ FAIL / {p=(index($0,"> " t)>0); next} /Test Files/ {p=0} p' "$TEMP/oam6-red-tts.txt"); printf '%s: container-missing=%s empty-state=%s history-log=%s\n' "$t" "$(printf '%s\n' "$s" | grep -m1 -E '^(AssertionError|TestingLibraryElementError)' | grep -c 'Unable to find an element by: \[data-testid="generation-history-container"\]')" "$(printf '%s\n' "$s" | grep -c 'data-testid="empty-state"')" "$(awk -v t="$t:" '/^(stderr|stdout) \| / {p=(index($0,"> " t)>0); next} /^ (FAIL|✓|×|❯) / {p=0} p && /^Failed to fetch history: \[TypeError: fetch failed\]/ {c++} END {print c+0}' "$TEMP/oam6-red-tts.txt")"; done` → 10 lines, each with `container-missing=1`, and `empty-state` and `history-log` at least `1`
+   Any other value fails T6C-6.
 5. Repository state (repository root): `git status --short`, then `git status --short -- audio_storage` (OAV-3; no backend test runs here, so it must print nothing).
 6. Processes: `tasklist //FI "IMAGENAME eq node.exe" //NH > "$TEMP/oam6-node-after.txt"; diff "$TEMP/oam6-node-before.txt" "$TEMP/oam6-node-after.txt"`. Any `node.exe` line present only in the after file belongs to this run and must be stopped before reporting.
 
@@ -914,7 +922,7 @@ Expected / Predicted — Not Yet Verified.
 
 - Command 2: `type-check exit 0`.
 - Command 3: `Tests  19 failed (19)`. The six pattern counts, in order, are 1, 1, 12, 2, 2, 1, for classes (A) to (F). Then `afterEach => 0`, `MSW => 0`, and `0` for the transform and load-error grep.
-- Command 4: `Tests  31 failed | 63 passed (94)`. The comparison prints `unexpected:` and `accepted, not failing:` with nothing under either. M3.3.2 and M3.3.5 each show `provider-error` with "fetch failed".
+- Command 4: `Tests  31 failed | 63 passed (94)`. The comparison prints `unexpected:` and `accepted, not failing:` with nothing under either. M3.3.2 and M3.3.5 each show `provider-error` with "fetch failed". The 15 selector-fetch lines show `fetch-failed=2 error-id=2`, except M3.12.1 and M3.12.7 with `4` and `4`. The 10 history lines show `container-missing=1 empty-state=2 history-log=1`.
 - Command 5: `?? frontend/tests/tts-provider-choice.spec.tsx`, ` M frontend/tests/mocks/tts-handlers.ts`, ` M frontend/tests/tts.spec.tsx`, plus work-item records under `docs/.ai/chatterbox-original-app/`. `git status --short -- audio_storage` prints nothing.
 - Command 6: no `node.exe` process started by this run is still running.
 - Repeat run: none. These tests touch no persistent state and override no configuration (`implementation-planning` Repeatable, Isolated Verification). Each test resets its recorded requests in `beforeEach`, and setup resets the handlers after each test (`setup.ts:9`).
@@ -937,6 +945,20 @@ Planning-time dry run, not milestone evidence. Disposable copy: `git archive HEA
 | 9 | Corrections the dry run caused. The jsdom `Blob` had no `arrayBuffer()` (`TypeError: loaded.arrayBuffer is not a function`), so it is read with `FileReader`. `ctx.body(Uint8Array)` failed type-check (TS2345), so an `ArrayBuffer` is passed. Length assertions were added before `toHaveValue`, to keep failure output short | Applied in the code above; runs 4–8 are the reruns after the corrections |
 
 Created during the dry run, all under the session scratchpad and deleted afterwards: `dry/` (the copy with its `node_modules`), `orig/`, `final/`, `draft/`, and the logs. The probe never entered the repository.
+
+#### Revision 2 baseline check (2026-11-14)
+
+Planning-time observation, not milestone evidence. It ran on the real worktree's untouched frontend at HEAD `b8704a6` (`git status --short -- frontend` printed nothing; only this plan and `Plan.md` were modified, under `docs/`). No file was applied. The ports check printed only `ports-check exit 1`. Logs went to the session scratchpad and were deleted afterwards.
+
+| # | Command (in `frontend/`) | Result |
+| --- | --- | --- |
+| R1 | `npx vitest run tests/tts.spec.tsx` | `Tests  27 failed | 67 passed (94)`. The 27 failing names equal T6Q-1's list |
+| R2 | Per-test listing of the 27: first error line, `fetch failed` and `*-error` count in the `FAIL` section, `empty-state` and "No generations yet" count, and stderr count of `Failed to fetch history: [TypeError: fetch failed]` | 17 (M3.2.1–M3.2.7, M3.3.1–M3.3.6, M3.11.1, M3.11.2, M3.12.1, M3.12.7): `fetch failed` and `provider-error` or `voice-selector-error` in the section, no history log line. 10 (M3.7.1–M3.7.7, M3.11.3, M3.11.5, M3.12.5): first error `Unable to find an element by: [data-testid="generation-history-cont…`, `empty-state` and "No generations yet" twice each, `fetch failed` 0 times in the section, history log line once each, cause `code: 'ECONNREFUSED'`. This matches the stopped run's command 4 observation |
+| R3 | The two loops of command 4's revised last check, run on a copy of the R1 log named `oam6-red-tts.txt` | 15 lines `fetch-failed=2 error-id=2` (M3.12.1 and M3.12.7: `4` and `4`); 10 lines `container-missing=1 empty-state=2 history-log=1` |
+| R4 | `tasklist` of `node.exe` before and after R1, then `diff` | `diff exit 0` |
+| R5 | `sed -n` / `tr -d '\r'` / `sha256sum` of lines 136-648, 656-743 and 751-765 of this revised plan | `de6f2493…2a24`, `9caf63cb…eb8e`, `c40a4059…4982`, unchanged, so Execution Step 3 still extracts the same code |
+
+Not re-run: the new file and the diffs, which revision 2 does not change. The stopped run's commands 2 and 3 matched this plan's expectations (`Plan.md`, OAM-6 stopped execution evidence), and the first dry run covers them.
 
 ## Risks
 
@@ -968,6 +990,27 @@ Reverse only this milestone's files:
 - Any test that fakes, stands in for or calls Chatterbox (COA-16); any Docker or `gcloud` command (CON-2).
 - Page behavior the requirements do not ask for: hiding the language control for Google, history display of cloned generations, and duplicate prevention beyond the disabled button (COA-13).
 
+## Revision 2 Changes
+
+Revision of the approved plan after the stopped run (`Plan.md`, OAM-6 stopped execution evidence). It is not a fresh draft. No test code, diff, hash, line range, Files in Scope entry, decision T6D-1 to T6D-8, T6Q-1 or its answer (a), or the 27 accepted names changed.
+
+- **T6C-6** now states both baseline causes. The 17 selector tests fail on the selectors' "fetch failed". The 10 history tests fail on the history fetch's `TypeError: fetch failed`, which is logged on stderr, with the empty state and no `generation-history-container`. The criterion's rule is unchanged: only the 27 named failures plus the 4 changed M3.1 tests are accepted, each for its baseline cause.
+- **Command 4's last check**, a prose instruction before, is now two commands with stated pass values (Verification, command 4), dry-run on the baseline log (R3).
+- **Current Repository State**: the cause sentence for the 27 now names both causes. That sentence made the same claim as T6C-6, so it is updated with it.
+- **Expected Evidence, command 4**: the values the two new loops are predicted to print are added.
+- **Execution Step 5 and T6D-9**: commands now run one at a time (below).
+- **Review Summary, Authoritative References, Preconditions**: one sentence each, recording this revision, the `Blocked` status that was re-read and HEAD `b8704a6`. These edits stay on their existing lines, so lines 136-648, 656-743 and 751-765 still hold the code blocks (R5).
+- **Planning-Time Dry Run**: Revision 2 baseline check added.
+
+Not changed, for review: T6Q-1's recorded text, including option (a)'s phrase "a different cause than the selectors' 'fetch failed'", is kept as answered. T6C-6 now spells out that, for the 10 history tests, the baseline "fetch failed" is the history fetch's. Re-approval confirms that answer (a) covers this.
+
+**T6D-9 Commands run one at a time.** The stopped run ran commands 3 and 4 in the background at the same time (its Deviations). Its results still matched this plan, except T6C-6 as written, so running them together caused no observed difference. They still run one after the other, for three reasons:
+- Both start vitest in the same `frontend/`, and every wait uses the default 1000 ms `waitFor` timeout (T6R-4). CPU contention could push a wait past that limit. That is a hypothesis; it was not measured.
+- Command 6's `node.exe` before/after comparison is clearest when only one run's processes exist at a time.
+- Each command's evidence then comes from a run that had the machine to itself.
+
+Alternative: allow commands 3 and 4 to run in parallel. They write separate logs, and the stopped run showed no interference. Not chosen, because a timing failure in a parallel run could not be told apart from a real failure without re-running, and `implementation-planning` Pre-existing Failures forbids re-running until a check passes.
+
 ## Human Review
 
-Status: Approved by Avinash Srivastava on 2026-11-14, as written, including decisions T6D-1 to T6D-7 and the T6Q-1 answer (a).
+Status: Revision 2 approved by Avinash Srivastava on 2026-11-14, as written, including T6D-9 and confirming that the T6Q-1 answer (a) covers the 10 history tests' history-fetch cause. The earlier approval (Avinash Srivastava, 2026-11-14, including T6D-1 to T6D-7 and the T6Q-1 answer (a)) covered revision 1, whose execution stopped at the T6C-6 blocker recorded in `Plan.md`.

@@ -357,7 +357,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
 | OAM-4 Inference service RED | Complete — valid RED established 2026-11-13 | `004_Implementation_Plan_OAM-4.md`; see OAM-4 RED evidence below (`003_Implementation_Plan_OAM-4.md` superseded, not executed) |
 | OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
-| OAM-6 TTS page RED | Pending | — |
+| OAM-6 TTS page RED | Blocked — `006_Implementation_Plan_OAM-6.md` criterion T6C-6 cannot be met as written: 10 of the 27 named failures fail on the history fetch, not "the selectors' fetch failed" | `006_Implementation_Plan_OAM-6.md`; see OAM-6 stopped execution evidence below (test files rolled back) |
 | OAM-7 TTS page GREEN | Pending | — |
 | OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
 
@@ -499,6 +499,27 @@ Executed 2026-11-13 at HEAD `61793b6`, which differs from the plan's `598d9eb` o
 - Pre-authorized contingencies: none listed and none applied.
 - Deviations: none in the planned commands, which ran as written and in order. Two read-only checks were added: a `grep` of the full log for the accepted failure's `ImportError` line, and per-file counts in the collect log of the 29 preserved tests. To compare against command 8, `ls -l` was run on this run's `$TEMP` files to get their times.
 - Processes: the background suite job exited. No server, container or other process started by this run is still running.
+
+### OAM-6 stopped execution evidence
+
+Executed 2026-11-14 at HEAD `b8704a6`, which differs from the plan's recorded `ce598d4` only by the plan itself. Git Bash. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`), outside the repository. RED was not established as complete; no production file was touched.
+
+- Execution Step 1: Human Review reads "Approved by Avinash Srivastava on 2026-11-14, as written, including decisions T6D-1 to T6D-7 and the T6Q-1 answer (a)."
+- Command 1: `git status --short` printed nothing; `ports-check exit 1`; `node_modules present`; node.exe before: PIDs 8252, 11512.
+- Execution Step 3: `sha256sum` printed `de6f2493…2a24`, `9caf63cb…eb8e`, `c40a4059…4982` (all as required).
+- Execution Step 4: both `git apply --check` and `git apply` succeeded.
+- Command 2: `de6f2493c63f319ec9c6a71eab2b1988b069d35b222211f3a361058c3fd22a24`, `b7ba4cadaadfa89a18b9e4d631a9ad2e97b60f98fb36a4b67a20fbb087b44952`, `4c6c32e5f406076e80011235fbdb95349a16352e6a59591e06b73eac437c5049` (T6C-1 met); `type-check exit 0` (T6C-2 met).
+- Command 3: `Tests  19 failed (19)`. Pattern counts 1, 1, 12, 2, 2, 1; `afterEach => 0`; `MSW => 0`; load-error grep `0`; `unexpected request` 0. First error per test: OAM-6.1 `expected [ 'azure', 'chatterbox', …(2) ] to deeply equal [ 'chatterbox', 'google' ]` (A); OAM-6.2 `to match object` with `provider: "google"` missing (B); OAM-6.3, OAM-6.5 ×9, OAM-6.6, OAM-6.7 `expected [ Array(2) ] to deeply equal [ 'voice-1a2b3c4d', 'voice-5e6f7a8b' ]`, received `en-US-Neural2-A`, `hi-IN-Neural2-A` (C); OAM-6.4 ×2 `Unable to find an element by: [data-testid="language-select"]` (D); OAM-6.8, OAM-6.9 `expected 5000 to be 6600` (E); OAM-6.10 `to have a length of +0 but got 4` (F). T6C-3 and T6C-7 met.
+- Command 4: `Tests  31 failed | 63 passed (94)`; accepted list `31`; `unexpected:` empty; `accepted, not failing:` empty. `M3.3.2: fetch failed => 3`, `M3.3.5: fetch failed => 3` (T6C-5 met). `M3.1.2` `toHaveTextContent()` received `0 / 5000`; `M3.1.6` `expected 5000 to be 5001`; `M3.1.7` received `87 / 5000`; `M3.1.8` received `5000 / 5000` (T6C-4 met).
+- Command 4, last check (the other 25 named failures must show `fetch failed` or the selector's error state in their `FAIL` section): 15 do (M3.2.1–M3.2.7, M3.3.1, M3.3.3, M3.3.4, M3.3.6, M3.11.1, M3.11.2, M3.12.1, M3.12.7; `fetch failed` and a `*-error` test id in each section). **10 do not**: M3.7.1–M3.7.7, M3.11.3, M3.11.5 and M3.12.5 each fail with `Unable to find an element by: [data-testid="generation-history-container"]`, and the DOM shows `data-testid="empty-state"` "No generations yet". The history component catches its fetch error (`frontend/src/components/GenerationHistory.tsx:35-36`), and each of the 10 logs `Failed to fetch history: [TypeError: fetch failed]` once on stderr only. So T6C-6 ("each fails for its baseline cause, the selectors' 'fetch failed'") cannot be met as written. Execution stopped here, without reinterpreting the criterion.
+- Command 5 (before rollback): ` M frontend/tests/mocks/tts-handlers.ts`, ` M frontend/tests/tts.spec.tsx`, `?? frontend/tests/tts-provider-choice.spec.tsx`; `git status --short -- audio_storage` printed nothing.
+- Command 6: `diff` of node.exe lists printed nothing (`diff exit 0`).
+- Rollback / Recovery applied as the plan writes it: `rm frontend/tests/tts-provider-choice.spec.tsx`; `git checkout -- frontend/tests/tts.spec.tsx frontend/tests/mocks/tts-handlers.ts`; `git status --short` then printed nothing.
+- Minimum revision needed: only `006_Implementation_Plan_OAM-6.md` (T6C-6 and command 4's last check) must state the history tests' baseline cause, the history fetch's `TypeError: fetch failed` on stderr with the empty state. Whether that matches the baseline should also be confirmed. No `Plan.md` scope, milestone or criterion change is needed: the OAM-6 success criterion "All other tests keep their baseline result" is unchanged.
+- Preserved-behavior tests expected to pass at RED: none; no new test passed.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: commands 3 and 4 ran in the background at the same time, not one after the other. Read-only checks were added: a per-test first-error listing for command 3, the received values for classes (B) and (C) and for M3.1.2/7/8, a per-section `fetch failed` / `*-error` count for command 4, and a per-test stderr count of `Failed to fetch history`.
+- Processes: both background vitest jobs exited. No process started by this run is still running.
 
 ## Risks
 
