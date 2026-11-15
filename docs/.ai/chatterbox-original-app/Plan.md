@@ -359,7 +359,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
 | OAM-6 TTS page RED | Complete — valid RED established 2026-11-14 | `006_Implementation_Plan_OAM-6.md` revision 2; see OAM-6 RED evidence (revision 2) below (the earlier stopped run is kept below) |
 | OAM-7 TTS page GREEN | Complete — GREEN verified 2026-11-14 | `007_Implementation_Plan_OAM-7.md`; see OAM-7 GREEN evidence below |
-| OAM-8 Cloud Run manual validation (OTHER) | Waiting — manual check from user | `008_Implementation_Plan_OAM-8.md`; see OAM-8 manual validation evidence below |
+| OAM-8 Cloud Run manual validation (OTHER) | Partially validated 2026-11-15 — M8-2 and M8-3 met (English and Hindi clones through the deployed Chatterbox); M8-4 to M8-12 not run; not Complete | `008_Implementation_Plan_OAM-8.md`; see OAM-8 manual validation evidence below |
 
 ### OAM-2 RED evidence
 
@@ -573,18 +573,24 @@ Protocol: `008_Implementation_Plan_OAM-8.md`, Validation Protocol. The user runs
 
 | Case | Checked | Setting change from the start settings (M8P-4) | Voice on `/tts` | Language | What the user saw or heard | History total before → after | Result |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| M8-1 | One instance of each local service; the deployed service is the unchanged one at the CON-5 URL and was not redeployed for this check | none | — | — | | — | |
-| M8-2 | S-1: Chrome recording, English | none | OAM8 Chrome | English | | | |
-| M8-3 | S-1: Chrome recording, Hindi | none | OAM8 Chrome | Hindi | | | |
-| M8-4 | S-2: WAV upload, English | none | Unnamed Voice (newest) | English | | | |
-| M8-5 | S-2: WAV upload, Hindi | none | Unnamed Voice (newest) | Hindi | | | |
-| M8-6 | Text over 5000 characters, spoken whole | none | OAM8 Chrome | English | | | |
-| M8-7 | Cloned generation in history, downloaded, 30-day retention, deleted | none | OAM8 Chrome | English | | | |
-| M8-8 | OAF-5 timed out | `CHATTERBOX_TIMEOUT_SECONDS` = `3` | OAM8 Chrome | English | | | |
-| M8-9 | OAF-6 cannot connect | `CHATTERBOX_URL` = `https://127.0.0.1:1` | OAM8 Chrome | English | | | |
-| M8-10 | OAF-7 access denied | `GOOGLE_APPLICATION_CREDENTIALS` = `$HOME\oam8-private\other-account-key.json` | OAM8 Chrome | English | | | |
-| M8-11 | OAF-8 service error | `CHATTERBOX_URL` = the CON-5 URL followed by `/oam8-no-such-path` | OAM8 Chrome | English | | | |
-| M8-12 | OAF-9 not audio | none (M8D-6) | — | — | | — | |
+| M8-1 | One instance of each local service; the deployed service is the unchanged one at the CON-5 URL and was not redeployed for this check | none | — | — | One listener each on 8002, 8003, 5173 (started by the executor); deployment unchanged not separately confirmed by the user | — | not recorded |
+| M8-2 | S-1: Chrome recording, English | none | `test-voice` (`voice-94f492fd`) | English | User: "everything worked". Logs: sample fetched (`GET /voices/voice-94f492fd/sample` 200), infer 200, 4.5 s clip, downloaded 200. Whether the voice was recorded or uploaded is not recorded | 0 → 1 | met |
+| M8-3 | S-1: Chrome recording, Hindi | none | `hindi-voice` (`voice-2a89125c`) | Hindi | User: "everything worked". Logs: sample fetched 200, infer 200, 18.0 s clip, downloaded 200 | 1 → 2 | met |
+| M8-4 | S-2: WAV upload, English | none | Unnamed Voice (newest) | English | Not run as a separate case | | not run |
+| M8-5 | S-2: WAV upload, Hindi | none | Unnamed Voice (newest) | Hindi | Not run as a separate case | | not run |
+| M8-6 | Text over 5000 characters, spoken whole | none | OAM8 Chrome | English | Not run (no generation over 5000 characters in history) | | not run |
+| M8-7 | Cloned generation in history, downloaded, 30-day retention, deleted | none | `test-voice` | English | Both clones listed in history and downloaded (200). Retention read by the executor from the database: created 2026-11-15 04:14:18, expires 2026-12-15 04:14:18 (30 days). Delete not performed | 2 (no delete) | partial — delete not run |
+| M8-8 | OAF-5 timed out | `CHATTERBOX_TIMEOUT_SECONDS` = `3` | OAM8 Chrome | English | Not run | | not run |
+| M8-9 | OAF-6 cannot connect | `CHATTERBOX_URL` = `https://127.0.0.1:1` | OAM8 Chrome | English | Not run | | not run |
+| M8-10 | OAF-7 access denied | `GOOGLE_APPLICATION_CREDENTIALS` = `$HOME\oam8-private\other-account-key.json` | OAM8 Chrome | English | Not run | | not run |
+| M8-11 | OAF-8 service error | `CHATTERBOX_URL` = the CON-5 URL followed by `/oam8-no-such-path` | OAM8 Chrome | English | Not run | | not run |
+| M8-12 | OAF-9 not audio | none (M8D-6) | — | — | Not run | — | not run |
+
+#### Run of 2026-11-14/15 (deviations from the protocol)
+
+- The executor (Claude) started the three services in the background at the user's request, instead of the user's four terminals: voice service, inference service with `CHATTERBOX_URL` = the CON-5 URL, `GOOGLE_APPLICATION_CREDENTIALS` = the `test-850` key file in the main checkout (outside this worktree, not read beyond its `client_email`), `CHATTERBOX_TIMEOUT_SECONDS=1200`, `VOICE_SERVICE_URL=http://localhost:8002`, `INFERENCE_PROVIDER=mock`, `AUDIO_STORAGE_PATH` under `$HOME\oam8-private`, and the frontend.
+- `DATABASE_URL` was a local SQLite file under `$HOME\oam8-private` instead of a PostgreSQL account typed at a prompt (M8Q-1 (a)), so no password was needed. It records the expiry the same way.
+- The user ran the browser steps and reported "everything worked". The table records only what the user reported and the service logs show. Two clones were made (one English, one Hindi). The WAV-upload cases, the long text, the delete and the five failure causes were not run.
 
 #### Executor pre-check evidence (steps 1–4)
 
