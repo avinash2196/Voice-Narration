@@ -1,4 +1,5 @@
 *
 !requirements-dev.txt
+!requirements-evaluator.txt
 !containers/
 !containers/harness.Dockerfile

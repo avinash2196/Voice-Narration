@@ -3,5 +3,9 @@
 /test-results/
 /playwright-report/
 /.env
-__pycache__/
+/__pycache__/
 *.pyc
+service-account-key.json
+*.key
+*.pem
+/voice_storage/

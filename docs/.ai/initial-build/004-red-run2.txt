@@ -1,0 +1,1139 @@
+Command: .\.venv\Scripts\python.exe -m pytest -p no:anyio tests/test_persistence.py -ra --tb=short
+Context: approved host execution; repository cwd unchanged; no environment rewrite
+Exit code: 1
+============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.1.1, pluggy-1.7.0
+rootdir: C:\Users\avina\Downloads\avinash-repo\v11\Voice-Narration
+configfile: pytest.ini
+collected 33 items
+
+tests\test_persistence.py FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF              [100%]
+
+================================== FAILURES ===================================
+________________ test_owner_isolation_survives_reopen[consent] ________________
+tests\test_persistence.py:159: in test_owner_isolation_survives_reopen
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+---------------------------- Captured stdout setup ----------------------------
+isolated persistence project: vnredf7aef4ab3d5943a9b7a59f4fe0e172be container: d26969579b5b6fac8b76d291f9907908c0d25656bc331c16122ca70e1f3b29d6
+________________ test_owner_isolation_survives_reopen[voices] _________________
+tests\test_persistence.py:159: in test_owner_isolation_survives_reopen
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_________________ test_owner_isolation_survives_reopen[jobs] __________________
+tests\test_persistence.py:159: in test_owner_isolation_survives_reopen
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______________ test_owner_isolation_survives_reopen[artifacts] _______________
+tests\test_persistence.py:159: in test_owner_isolation_survives_reopen
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+__________________ test_owner_isolation_survives_reopen[ai] ___________________
+tests\test_persistence.py:159: in test_owner_isolation_survives_reopen
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_live_scoped_admin_grants[consent-consents:read-consent] _________
+tests\test_persistence.py:185: in test_live_scoped_admin_grants
+    auth = open_store("auth")
+           ^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_________ test_live_scoped_admin_grants[voices-profiles:read-profile] _________
+tests\test_persistence.py:185: in test_live_scoped_admin_grants
+    auth = open_store("auth")
+           ^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______________ test_live_scoped_admin_grants[jobs-jobs:read-job] ______________
+tests\test_persistence.py:185: in test_live_scoped_admin_grants
+    auth = open_store("auth")
+           ^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_live_scoped_admin_grants[artifacts-samples:read-sample] _________
+tests\test_persistence.py:185: in test_live_scoped_admin_grants
+    auth = open_store("auth")
+           ^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_live_scoped_admin_grants[artifacts-audio:read-generated] ________
+tests\test_persistence.py:185: in test_live_scoped_admin_grants
+    auth = open_store("auth")
+           ^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______________ test_retention_defaults_required_values_and_audit ______________
+tests\test_persistence.py:220: in test_retention_defaults_required_values_and_audit
+    policy = open_store("policy")
+             ^^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+___________ test_retention_expiry_and_shortening[voices-profile-8] ____________
+tests\test_persistence.py:249: in test_retention_expiry_and_shortening
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+___________ test_retention_expiry_and_shortening[consent-consent-9] ___________
+tests\test_persistence.py:249: in test_retention_expiry_and_shortening
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+__________ test_retention_expiry_and_shortening[artifacts-sample-3] ___________
+tests\test_persistence.py:249: in test_retention_expiry_and_shortening
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_retention_expiry_and_shortening[artifacts-generated-30] _________
+tests\test_persistence.py:249: in test_retention_expiry_and_shortening
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______ test_retention_expiry_and_shortening[artifacts-joined_preview-30] ______
+tests\test_persistence.py:249: in test_retention_expiry_and_shortening
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______ test_immediate_durable_fence_and_purge[profile_deleted-consent] _______
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______ test_immediate_durable_fence_and_purge[profile_deleted-voices] ________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_immediate_durable_fence_and_purge[profile_deleted-jobs] _________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______ test_immediate_durable_fence_and_purge[profile_deleted-artifacts] ______
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_________ test_immediate_durable_fence_and_purge[profile_deleted-ai] __________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______ test_immediate_durable_fence_and_purge[consent_revoked-consent] _______
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______ test_immediate_durable_fence_and_purge[consent_revoked-voices] ________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_immediate_durable_fence_and_purge[consent_revoked-jobs] _________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______ test_immediate_durable_fence_and_purge[consent_revoked-artifacts] ______
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_________ test_immediate_durable_fence_and_purge[consent_revoked-ai] __________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_______ test_immediate_durable_fence_and_purge[sample_expired-consent] ________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_immediate_durable_fence_and_purge[sample_expired-voices] ________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+_________ test_immediate_durable_fence_and_purge[sample_expired-jobs] _________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+______ test_immediate_durable_fence_and_purge[sample_expired-artifacts] _______
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+__________ test_immediate_durable_fence_and_purge[sample_expired-ai] __________
+tests\test_persistence.py:279: in test_immediate_durable_fence_and_purge
+    repo = open_store(service)
+           ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+________ test_cleanup_failure_never_restores_access_or_moves_deadline _________
+tests\test_persistence.py:326: in test_cleanup_failure_never_restores_access_or_moves_deadline
+    repo = open_store("artifacts")
+           ^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+____________ test_audit_metadata_has_independent_bounded_retention ____________
+tests\test_persistence.py:354: in test_audit_metadata_has_independent_bounded_retention
+    audit = open_store("audit")
+            ^^^^^^^^^^^^^^^^^^^
+tests\test_persistence.py:119: in open_store
+    module = importlib.import_module(f"voice_narration.{service}.persistence")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1312: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:488: in _call_with_frames_removed
+    ???
+<frozen importlib._bootstrap>:1404: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1369: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1333: in _find_and_load_unlocked
+    ???
+E   ModuleNotFoundError: No module named 'voice_narration'
+=========================== short test summary info ===========================
+FAILED tests/test_persistence.py::test_owner_isolation_survives_reopen[consent]
+FAILED tests/test_persistence.py::test_owner_isolation_survives_reopen[voices]
+FAILED tests/test_persistence.py::test_owner_isolation_survives_reopen[jobs]
+FAILED tests/test_persistence.py::test_owner_isolation_survives_reopen[artifacts]
+FAILED tests/test_persistence.py::test_owner_isolation_survives_reopen[ai] - ...
+FAILED tests/test_persistence.py::test_live_scoped_admin_grants[consent-consents:read-consent]
+FAILED tests/test_persistence.py::test_live_scoped_admin_grants[voices-profiles:read-profile]
+FAILED tests/test_persistence.py::test_live_scoped_admin_grants[jobs-jobs:read-job]
+FAILED tests/test_persistence.py::test_live_scoped_admin_grants[artifacts-samples:read-sample]
+FAILED tests/test_persistence.py::test_live_scoped_admin_grants[artifacts-audio:read-generated]
+FAILED tests/test_persistence.py::test_retention_defaults_required_values_and_audit
+FAILED tests/test_persistence.py::test_retention_expiry_and_shortening[voices-profile-8]
+FAILED tests/test_persistence.py::test_retention_expiry_and_shortening[consent-consent-9]
+FAILED tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-sample-3]
+FAILED tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-generated-30]
+FAILED tests/test_persistence.py::test_retention_expiry_and_shortening[artifacts-joined_preview-30]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-consent]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-voices]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-jobs]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-artifacts]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[profile_deleted-ai]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-consent]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-voices]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-jobs]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-artifacts]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[consent_revoked-ai]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-consent]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-voices]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-jobs]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-artifacts]
+FAILED tests/test_persistence.py::test_immediate_durable_fence_and_purge[sample_expired-ai]
+FAILED tests/test_persistence.py::test_cleanup_failure_never_restores_access_or_moves_deadline
+FAILED tests/test_persistence.py::test_audit_metadata_has_independent_bounded_retention
+============================= 33 failed in 30.81s =============================
+

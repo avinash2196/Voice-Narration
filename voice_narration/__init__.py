@@ -1,1 +1,1 @@
-"""Voice Narration backend package."""
+"""Voice Narration services."""
