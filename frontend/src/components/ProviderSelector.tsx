@@ -85,9 +85,6 @@ export function ProviderSelector() {
 
             <div className="flex-1">
               <p className="font-medium text-gray-900">{provider.name}</p>
-              <p className="text-xs text-gray-600">
-                Max {provider.maxCharsPerRequest} chars/request
-              </p>
             </div>
 
             {!provider.available && (

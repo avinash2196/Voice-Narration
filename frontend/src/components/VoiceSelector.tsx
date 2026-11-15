@@ -6,7 +6,7 @@ import { Voice } from '@/types/voice';
 
 export function VoiceSelector() {
   const auth = useAuth();
-  const { selectedVoice, dispatch } = useTTS();
+  const { selectedVoice, selectedProvider, dispatch } = useTTS();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +18,19 @@ export function VoiceSelector() {
       setLoading(true);
       try {
         const approvedVoices = await ttsApi.getApprovedVoices(auth.token);
+
+        if (selectedProvider === 'chatterbox') {
+          // Recorded and uploaded voices carry no provider field (API-Contract.md, Voice List).
+          const cloningVoices = approvedVoices.filter((voice) => !voice.provider);
+          setVoices(cloningVoices);
+
+          const keepsSelection = cloningVoices.some((voice) => voice.id === selectedVoice?.id);
+          if (!keepsSelection && (selectedVoice || cloningVoices.length > 0)) {
+            dispatch({ type: 'SELECT_VOICE', payload: cloningVoices[0] ?? null });
+          }
+          return;
+        }
+
         const providerVoices = approvedVoices.filter((voice) => {
           const voiceId = (voice.id || '').trim();
           const provider = (voice as any).provider?.toLowerCase?.() || '';
@@ -45,7 +58,7 @@ export function VoiceSelector() {
     };
 
     fetchVoices();
-  }, [auth.token, dispatch, selectedVoice]);
+  }, [auth.token, dispatch, selectedVoice, selectedProvider]);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const voiceId = e.target.value;

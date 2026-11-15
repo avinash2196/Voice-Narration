@@ -1,8 +1,11 @@
 import { API_CONFIG } from '@/utils/api-config';
-import { TTSGeneration, TTSProvider, RateLimit } from '@/types/tts';
+import { TTSGeneration, TTSProvider, RateLimit, ChatterboxLanguage } from '@/types/tts';
 import { Voice } from '@/types/voice';
 
 const VALID_GOOGLE_VOICE_PATTERN = /^[a-z]{2,3}-[A-Z]{2,}[-A-Za-z0-9]+$/;
+
+// The only providers a generation may name (API-Contract.md, Inference Generation, `provider`).
+const SELECTABLE_PROVIDERS = ['google', 'chatterbox'];
 
 export function normalizeVoiceIdForProvider(provider: string, voiceId?: string): string {
   const candidate = (voiceId || '').trim();
@@ -33,6 +36,7 @@ export class TTSApiClient {
     text: string,
     voiceId: string,
     provider: string,
+    language: ChatterboxLanguage,
     token: string
   ): Promise<TTSGeneration> {
     const jobId = `gen-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -48,6 +52,8 @@ export class TTSApiClient {
       body: JSON.stringify({
         script: text,
         voice_id: normalizedVoiceId,
+        provider: normalizedProvider,
+        ...(normalizedProvider === 'chatterbox' ? { language } : {}),
       }),
     });
 
@@ -192,12 +198,13 @@ export class TTSApiClient {
 
     const data = await response.json();
 
-    return (data.backends || []).map((backend: any) => ({
-      id: backend.name,
-      name: backend.description.split(' (')[0],
-      available: true,
-      maxCharsPerRequest: 5000,
-    }));
+    return (data.backends || [])
+      .filter((backend: any) => SELECTABLE_PROVIDERS.includes(backend.name))
+      .map((backend: any) => ({
+        id: backend.name,
+        name: backend.description.split(' (')[0],
+        available: true,
+      }));
   }
 
   static async getApprovedVoices(token: string): Promise<Voice[]> {

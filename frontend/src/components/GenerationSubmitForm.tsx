@@ -6,6 +6,7 @@ import { TTSPollingService } from '@/services/ttsPollingService';
 import { TextToSpeechInput } from './TextToSpeechInput';
 import { VoiceSelector } from './VoiceSelector';
 import { ProviderSelector } from './ProviderSelector';
+import { LanguageSelector } from './LanguageSelector';
 
 export function GenerationSubmitForm() {
   const auth = useAuth();
@@ -13,6 +14,7 @@ export function GenerationSubmitForm() {
     generationText,
     selectedVoice,
     selectedProvider,
+    selectedLanguage,
     rateLimit,
     dispatch,
   } = useTTS();
@@ -37,6 +39,7 @@ export function GenerationSubmitForm() {
         generationText,
         selectedVoice.id,
         selectedProvider,
+        selectedLanguage,
         auth.token
       );
 
@@ -89,6 +92,8 @@ export function GenerationSubmitForm() {
       <VoiceSelector />
 
       <ProviderSelector />
+
+      {selectedProvider === 'chatterbox' && <LanguageSelector />}
 
       {/* Rate Limit Display */}
       {rateLimit && (

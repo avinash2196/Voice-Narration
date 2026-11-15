@@ -358,7 +358,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-4 Inference service RED | Complete — valid RED established 2026-11-13 | `004_Implementation_Plan_OAM-4.md`; see OAM-4 RED evidence below (`003_Implementation_Plan_OAM-4.md` superseded, not executed) |
 | OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
 | OAM-6 TTS page RED | Complete — valid RED established 2026-11-14 | `006_Implementation_Plan_OAM-6.md` revision 2; see OAM-6 RED evidence (revision 2) below (the earlier stopped run is kept below) |
-| OAM-7 TTS page GREEN | Pending | — |
+| OAM-7 TTS page GREEN | Complete — GREEN verified 2026-11-14 | `007_Implementation_Plan_OAM-7.md`; see OAM-7 GREEN evidence below |
 | OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
 
 ### OAM-2 RED evidence
@@ -540,6 +540,32 @@ Executed 2026-11-14 at HEAD `d05f16f`, which differs from `ce598d4` only under `
 - Pre-authorized contingencies: none listed, none applied.
 - Deviations: none in the planned commands, which ran as written, one at a time, in order. Read-only checks were added: a per-test first-error listing for command 3, the received values for classes (B) and (C) and for M3.1.2/7/8, a `provider-error` count for M3.3.2 and M3.3.5, and `git diff --stat` of the commits since `ce598d4`. HEAD is `d05f16f`, not the plan's `b8704a6`; the difference is only this work item's records.
 - Processes: no background job was used; every vitest run exited. No process started by this run is still running.
+
+### OAM-7 GREEN evidence
+
+Executed 2026-11-14 at HEAD `cb394ab`, which differs from the plan's `a909fd2` only by `007_Implementation_Plan_OAM-7.md` (`git diff --stat a909fd2 HEAD`: `1 file changed, 834 insertions(+)`). Git Bash. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`): `oam7-tsc.log`, `oam7-new.log`/`.txt`, `oam7-full.log`/`.txt`, `oam7-backend.log`, `oam7-collect.log`. No test, build, configuration, dependency or backend file was touched. No Docker or `gcloud` command ran, and no Chatterbox call was made.
+
+- Execution Step 1: Human Review reads "Approved by Avinash Srivastava on 2026-11-14, as written, including decisions T7D-1 to T7D-6 and the T7Q-1 answer (a)."
+- Command 1: `git status --short` printed nothing; `cb394ab`; backend diff printed nothing; `ports-check exit 1`; `node_modules present`. Before: node.exe PIDs 8252, 11512; python.exe PIDs 226024, 331996.
+- Execution Step 3: `sha256sum` printed `a37b0d07…b51d`, `051b068e…931d`, `ad4aa873…c7d1`, `40007dd4…7e3f`, `11355d21…8999`, `2344dbc7…fe19`, `e671d740…dbe7`, `9658d43c…f811` (all as required).
+- Execution Step 4: `git apply --check` and `git apply` succeeded for `tts`, `context`, `api`, `provider`, `voice`, `input`, `form`, in that order.
+- Command 2: `044050d6…be8b`, `f18d45a0…487a`, `6fe06e7b…3c55`, `7313d6f8…c9d`, `fc0217f2…ff2`, `470a93ae…485e`, `63767877…a134`, `a37b0d07…b51d`, all equal to the resulting-file hashes (T7C-1 met). `git status --short`: seven ` M frontend/src/…` lines and `?? frontend/src/components/LanguageSelector.tsx`. `type-check exit 0` (T7C-2 met).
+- Execution Step 6: accepted list hash `0757f7d1…9fa75` (as required); `90` lines; `sort -c` printed nothing.
+- Command 3 (`npx vitest run tests/tts-provider-choice.spec.tsx`): `Tests  19 passed (19)`; `FAIL => 0`; `MSW => 0`; `unexpected => 0` (T7C-3 met). The 19 OAM-6 RED tests now pass, with the test file unchanged.
+- Command 4a (`npx vitest run`, background, 20:56:22–21:02:20): `Test Files  2 failed | 3 passed (5)`; `Tests  90 failed | 282 passed (372)`. `✓ tests/auth-api.spec.tsx (80 tests)`, `✓ tests/auth.spec.tsx (73 tests)`, `✓ tests/tts-provider-choice.spec.tsx (19 tests)`, `❯ tests/tts.spec.tsx (94 tests | 27 failed)`, `❯ tests/voice.spec.tsx (106 tests | 63 failed)`. After the run: `ports-check exit 1`.
+- Command 4c: `90`; `unexpected:` empty; `accepted, not failing:` empty. So the failing tests are exactly the 90 accepted pre-existing names, and M3.1.2, M3.1.6, M3.1.7 and M3.1.8 pass.
+- Command 4d: `M3.3.2: fetch failed => 3`, `M3.3.5: fetch failed => 3`. The 15 selector tests each `fetch-failed=2 error-id=2`, except M3.12.1 and M3.12.7 with `4`/`4`. The 10 history tests each `container-missing=1 empty-state=2 history-log=1`. These equal the baseline (T7C-4 met).
+- Command 5a: `1`. Command 5b (background): `1 failed, 100 passed, 17 skipped, 169 warnings in 109.06s (0:01:49)`; interrupt count `0`.
+- Command 5c: `unexpected:` empty; `accepted, not failing:` empty. The one `FAILED` line is `tests/test_real_model_inference.py::TestRealModelInferenceRED::test_production_inference_module_missing`, with `ImportError: cannot import name 'ProductionInferenceProvider' from 'voice_narration.inference.production'` in the log.
+- Command 5d: `118 tests collected in 1.71s`; `0` from the ignored files.
+- Command 5e: ` M audio_storage/generation_index.json`, `?? audio_storage/generations/2026-11-15/` (the backend writes in UTC). After `git checkout -- audio_storage`, `git clean -fd -- audio_storage` printed `Removing audio_storage/archive/`, `Removing audio_storage/generations/2026-11-15/`, `Removing audio_storage/temp/`. The repeated status printed nothing (T7C-5 met).
+- Command 6: the same `git status --short` as command 2. The `git diff --stat` of the backend, test, build and configuration paths printed nothing, and `git status --short -- audio_storage` printed nothing.
+- Command 7: `diff exit 1` for both lists. The only differences are the memory columns of the same PIDs (node.exe 8252, 11512; python.exe 226024, 331996). No PID appears only in an after file, so no process started by this run is running (T7C-6 met).
+- Planned versus executed: the repository changes are exactly the one created and seven modified files, each equal to its planned hash. Nothing else changed outside `docs/.ai/chatterbox-original-app/`.
+- Repeat run: none, as the plan states (no persistent state or configuration override in these tests; OAV-3 restore applied for the backend).
+- Pre-authorized contingencies: none listed and none applied.
+- Deviations: none in the planned commands, which ran as written, one at a time, in order. Commands 4a and 5b ran in the background. Each next command started only after the previous one had exited and its output had been read. Two read-only checks were added: `git diff --stat a909fd2 HEAD`, because HEAD is `cb394ab`, and a `grep` of the backend log for the accepted failure's `ImportError` line, because the raw `FAILED` line carries no reason suffix.
+- Processes: both background jobs exited. No process started by this run is still running.
 
 ## Risks
 
