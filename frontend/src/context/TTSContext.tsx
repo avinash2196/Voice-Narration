@@ -10,6 +10,7 @@ export const TTSContext = createContext<{
 const initialState: TTSState = {
   selectedVoice: null,
   selectedProvider: 'google',
+  selectedLanguage: 'en',
   generationText: '',
   isGenerating: false,
   currentGeneration: null,
@@ -29,6 +30,9 @@ function ttsReducer(state: TTSState, action: TTSAction): TTSState {
 
     case 'SELECT_PROVIDER':
       return { ...state, selectedProvider: action.payload };
+
+    case 'SELECT_LANGUAGE':
+      return { ...state, selectedLanguage: action.payload };
 
     case 'START_GENERATION':
       return { ...state, isGenerating: true, error: null };

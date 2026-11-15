@@ -80,7 +80,7 @@ describe('M3.1: Text Input Validation', () => {
     const textarea = screen.getByRole('textbox', { name: /text to convert/i });
     expect(textarea).toHaveValue('');
     const charCount = screen.getByTestId('char-count');
-    expect(charCount).toHaveTextContent('0 / 5000');
+    expect(charCount).toHaveTextContent(/^0 characters$/);
   });
 
   it('M3.1.3: should accept text with standard characters', async () => {
@@ -110,14 +110,16 @@ describe('M3.1: Text Input Validation', () => {
     expect(textarea).toHaveValue(textSamples.utf8);
   });
 
-  it('M3.1.6: should reject text exceeding 5000 characters', async () => {
+  it('M3.1.6: should keep text exceeding 5000 characters whole', async () => {
     renderWithProvider(<TextToSpeechInput />);
     const textarea = screen.getByRole('textbox', { name: /text to convert/i }) as HTMLTextAreaElement;
     
     // Use fireEvent to set value directly to avoid long typing timeout
     fireEvent.change(textarea, { target: { value: textSamples.exceedsMaxLength } });
-    // Component should cap at 5000 chars
-    expect(textarea.value.length).toBeLessThanOrEqual(5000);
+    // No text cap for any provider (COA-17): all 5001 characters stay in the text box
+    expect(textarea.value.length).toBe(textSamples.exceedsMaxLength.length);
+    expect(textarea).toHaveValue(textSamples.exceedsMaxLength);
+    expect(textarea).not.toHaveAttribute('maxlength');
   });
 
   it('M3.1.7: should display character count', async () => {
@@ -127,20 +129,22 @@ describe('M3.1: Text Input Validation', () => {
     const charCount = screen.getByTestId('char-count');
     
     await user.type(textarea, textSamples.medium);
-    expect(charCount).toHaveTextContent(`${textSamples.medium.length} / 5000`);
+    expect(charCount).toHaveTextContent(new RegExp(`^${textSamples.medium.length} characters$`));
   });
 
-  it('M3.1.8: should show warning at 90% of character limit', async () => {
+  it('M3.1.8: should show no capacity warning or limit message for long text', async () => {
     renderWithProvider(<TextToSpeechInput />);
     const textarea = screen.getByRole('textbox', { name: /text to convert/i }) as HTMLTextAreaElement;
     
-    // Type text that exceeds 90% (4500 chars)
-    const longText = 'a'.repeat(4500);
+    // 5000 characters: the old cap showed both the 90% warning and the maximum-reached message here
+    const longText = 'a'.repeat(5000);
     fireEvent.change(textarea, { target: { value: longText } });
     
-    const warning = screen.getByTestId('char-warning');
-    expect(warning).toBeInTheDocument();
-    expect(warning).toHaveTextContent(/90% capacity reached/i);
+    expect(screen.getByTestId('char-count')).toHaveTextContent(/^5000 characters$/);
+    expect(screen.queryByTestId('char-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText(/90% capacity/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('max-chars-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText(/maximum character limit/i)).not.toBeInTheDocument();
   });
 });
 
@@ -252,9 +256,8 @@ describe('M3.3: Provider Selection', () => {
     await waitFor(() => {
       expect(screen.getByText('Google Text-to-Speech')).toBeInTheDocument();
     });
-    // Multiple providers show max chars, so use getAllByText or check individual text
-    const maxCharsElements = screen.getAllByText(/Max \d+ chars\/request/);
-    expect(maxCharsElements.length).toBeGreaterThan(0);
+    // No provider shows a "Max 5000 chars/request" label (COA-17)
+    expect(screen.queryAllByText(/Max \d+ chars\/request/)).toHaveLength(0);
   });
 
   it('M3.3.3: should allow selecting a provider', async () => {
@@ -288,9 +291,10 @@ describe('M3.3: Provider Selection', () => {
   it('M3.3.5: should show provider capabilities (rate limit, max chars)', async () => {
     renderWithProvider(<ProviderSelector />);
     await waitFor(() => {
-      const maxCharsTexts = screen.getAllByText(/Max \d+ chars\/request/);
-      expect(maxCharsTexts.length).toBeGreaterThan(0);
+      expect(screen.getByTestId('provider-selector-container')).toBeInTheDocument();
     });
+    // No provider shows a "Max 5000 chars/request" label (COA-17)
+    expect(screen.queryAllByText(/Max \d+ chars\/request/)).toHaveLength(0);
   });
 
   it('M3.3.6: should default to first available provider', async () => {

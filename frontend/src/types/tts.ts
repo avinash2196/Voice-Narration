@@ -4,7 +4,7 @@ export interface TTSGeneration {
   id: string;
   text: string;
   voiceId: string;
-  provider: 'google' | 'elevenlabs' | 'azure';
+  provider: 'google' | 'elevenlabs' | 'azure' | 'chatterbox';
   status: 'processing' | 'ready' | 'failed';
   audioFormat?: string;
   audioSize?: number;
@@ -21,8 +21,10 @@ export interface TTSProvider {
   id: string;
   name: string;
   available: boolean;
-  maxCharsPerRequest: number;
 }
+
+// The languages a Chatterbox generation accepts (API-Contract.md, Inference Generation, `language`).
+export type ChatterboxLanguage = 'en' | 'hi';
 
 export interface RateLimit {
   provider: string;
@@ -36,6 +38,7 @@ export interface RateLimit {
 export interface TTSState {
   selectedVoice: Voice | null;
   selectedProvider: string;
+  selectedLanguage: ChatterboxLanguage;
   generationText: string;
   isGenerating: boolean;
   currentGeneration: TTSGeneration | null;
@@ -49,6 +52,7 @@ export type TTSAction =
   | { type: 'SET_TEXT'; payload: string }
   | { type: 'SELECT_VOICE'; payload: Voice | null }
   | { type: 'SELECT_PROVIDER'; payload: string }
+  | { type: 'SELECT_LANGUAGE'; payload: ChatterboxLanguage }
   | { type: 'START_GENERATION' }
   | { type: 'UPDATE_GENERATION'; payload: TTSGeneration }
   | { type: 'GENERATION_COMPLETE'; payload: TTSGeneration }
