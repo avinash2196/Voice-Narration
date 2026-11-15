@@ -24,10 +24,6 @@ export const ttsHandlers = [
       return res(ctx.status(400), ctx.json(errorResponses.emptyText));
     }
 
-    if (text.length > 5000) {
-      return res(ctx.status(400), ctx.json(errorResponses.textTooLong));
-    }
-
     // Validate voice
     if (!voiceId) {
       return res(ctx.status(400), ctx.json(errorResponses.invalidVoice));

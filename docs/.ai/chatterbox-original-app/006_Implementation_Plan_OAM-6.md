@@ -1013,4 +1013,4 @@ Alternative: allow commands 3 and 4 to run in parallel. They write separate logs
 
 ## Human Review
 
-Status: Revision 2 approved by Avinash Srivastava on 2026-11-14, as written, including T6D-9 and confirming that the T6Q-1 answer (a) covers the 10 history tests' history-fetch cause. The earlier approval (Avinash Srivastava, 2026-11-14, including T6D-1 to T6D-7 and the T6Q-1 answer (a)) covered revision 1, whose execution stopped at the T6C-6 blocker recorded in `Plan.md`.
+Status: Executed 2026-11-14 — valid RED established; see `Plan.md`, OAM-6 RED evidence (revision 2). (Revision 2 approved by Avinash Srivastava on 2026-11-14, as written, including T6D-9 and confirming that the T6Q-1 answer (a) covers the 10 history tests' history-fetch cause. The earlier approval covered revision 1, whose execution stopped at the T6C-6 blocker recorded in `Plan.md`.)

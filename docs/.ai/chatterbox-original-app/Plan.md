@@ -357,7 +357,7 @@ No verification command uses Docker or `gcloud` (CON-2), and no automated test f
 | OAM-3 Voice service GREEN | Complete — GREEN verified 2026-11-13 | `002_Implementation_Plan_OAM-3.md` revision 4; see OAM-3 revision 4 GREEN evidence below (earlier stopped runs kept below) |
 | OAM-4 Inference service RED | Complete — valid RED established 2026-11-13 | `004_Implementation_Plan_OAM-4.md`; see OAM-4 RED evidence below (`003_Implementation_Plan_OAM-4.md` superseded, not executed) |
 | OAM-5 Inference service GREEN | Complete — GREEN verified 2026-11-13 | `005_Implementation_Plan_OAM-5.md`; see OAM-5 GREEN evidence below (the behavior that needs a Chatterbox call is not claimed; its evidence comes from OAM-8) |
-| OAM-6 TTS page RED | Blocked — `006_Implementation_Plan_OAM-6.md` criterion T6C-6 cannot be met as written: 10 of the 27 named failures fail on the history fetch, not "the selectors' fetch failed" | `006_Implementation_Plan_OAM-6.md`; see OAM-6 stopped execution evidence below (test files rolled back) |
+| OAM-6 TTS page RED | Complete — valid RED established 2026-11-14 | `006_Implementation_Plan_OAM-6.md` revision 2; see OAM-6 RED evidence (revision 2) below (the earlier stopped run is kept below) |
 | OAM-7 TTS page GREEN | Pending | — |
 | OAM-8 Cloud Run manual validation (OTHER) | Pending | — |
 
@@ -520,6 +520,26 @@ Executed 2026-11-14 at HEAD `b8704a6`, which differs from the plan's recorded `c
 - Pre-authorized contingencies: none listed, none applied.
 - Deviations: commands 3 and 4 ran in the background at the same time, not one after the other. Read-only checks were added: a per-test first-error listing for command 3, the received values for classes (B) and (C) and for M3.1.2/7/8, a per-section `fetch failed` / `*-error` count for command 4, and a per-test stderr count of `Failed to fetch history`.
 - Processes: both background vitest jobs exited. No process started by this run is still running.
+
+### OAM-6 RED evidence (revision 2)
+
+Executed 2026-11-14 at HEAD `d05f16f`, which differs from `ce598d4` only under `docs/.ai/chatterbox-original-app/` (`git diff --stat ce598d4 d05f16f -- frontend` printed nothing). Git Bash. Logs are in `$TEMP` (`C:\Users\avina\AppData\Local\Temp`): `oam6-tsc.log`, `oam6-red-new.log`/`.txt`, `oam6-red-tts.log`/`.txt`. No production, build or configuration file was touched.
+
+- Execution Step 1: Human Review reads "Revision 2 approved by Avinash Srivastava on 2026-11-14, as written, including T6D-9 and confirming that the T6Q-1 answer (a) covers the 10 history tests' history-fetch cause."
+- Command 1: `git status --short` printed nothing; `ports-check exit 1`; `node_modules present`; node.exe before: PIDs 8252, 11512.
+- Execution Step 3: `sha256sum` printed `de6f2493…2a24`, `9caf63cb…eb8e`, `c40a4059…4982` (all as required).
+- Execution Step 4: `spec applied`, `handlers applied` (both `git apply --check` and `git apply` succeeded).
+- Command 2: `de6f2493c63f319ec9c6a71eab2b1988b069d35b222211f3a361058c3fd22a24`, `b7ba4cadaadfa89a18b9e4d631a9ad2e97b60f98fb36a4b67a20fbb087b44952`, `4c6c32e5f406076e80011235fbdb95349a16352e6a59591e06b73eac437c5049` (T6C-1 met); `type-check exit 0` (T6C-2 met).
+- Command 3 (`npx vitest run tests/tts-provider-choice.spec.tsx`): `Tests  19 failed (19)`. Pattern counts 1, 1, 12, 2, 2, 1; `afterEach => 0`; `MSW => 0`; load-error grep `0`; `unexpected request` 0. First error per test: OAM-6.1 `expected [ 'azure', 'chatterbox', …(2) ] to deeply equal [ 'chatterbox', 'google' ]` (A); OAM-6.2 `expected { …(2) } to match object { …(3) }`, diff `- "provider": "google"` (B); OAM-6.3, OAM-6.5 ×9, OAM-6.6, OAM-6.7 `expected [ Array(2) ] to deeply equal [ 'voice-1a2b3c4d', 'voice-5e6f7a8b' ]`, received `en-US-Neural2-A`, `hi-IN-Neural2-A` (C); OAM-6.4 ×2 `TestingLibraryElementError: Unable to find an element by: [data-testid="language-select"]` (D); OAM-6.8, OAM-6.9 `expected 5000 to be 6600` (E); OAM-6.10 `expected [ <p …(1)></p>, … ] to have a length of +0 but got 4` (F). T6C-3 and T6C-7 met.
+- Command 4 (`npx vitest run tests/tts.spec.tsx`, started after command 3 exited and its log was read): `Tests  31 failed | 63 passed (94)`; accepted list `31`; `unexpected:` empty; `accepted, not failing:` empty. `M3.3.2: fetch failed => 3`, `M3.3.5: fetch failed => 3`, each with `data-testid="provider-error"` 2 (T6C-5 met; pre-existing, not RED evidence). `M3.1.2` `toHaveTextContent()` expected `/^0 characters$/`, received `0 / 5000`; `M3.1.6` `expected 5000 to be 5001`; `M3.1.7` expected `/^87 characters$/`, received `87 / 5000`; `M3.1.8` expected `/^5000 characters$/`, received `5000 / 5000` (T6C-4 met).
+- Command 4, last check: the 15 selector tests each `fetch-failed=2 error-id=2`, except M3.12.1 and M3.12.7 with `fetch-failed=4 error-id=4`; the 10 history tests (M3.7.1–M3.7.7, M3.11.3, M3.11.5, M3.12.5) each `container-missing=1 empty-state=2 history-log=1` (T6C-6 met).
+- Command 5: ` M frontend/tests/mocks/tts-handlers.ts`, ` M frontend/tests/tts.spec.tsx`, `?? frontend/tests/tts-provider-choice.spec.tsx`; `git status --short -- audio_storage` printed nothing.
+- Command 6: `diff exit 1`. The only differences are the memory columns of the same two processes (PIDs 8252, 11512 before and after); no `node.exe` PID appears only in the after file, so no process started by this run is running.
+- Assertion review: each new or changed assertion expresses COA-1, COA-3, COA-4, COA-5, COA-7, COA-13 or COA-17 as the approved plan writes it; every absence check (OAM-6.10, M3.1.8, M3.3.2, M3.3.5, and the long-text checks) first asserts a present element or value in the same test.
+- Preserved-behavior tests expected to pass at RED: none; no new or changed test passed.
+- Pre-authorized contingencies: none listed, none applied.
+- Deviations: none in the planned commands, which ran as written, one at a time, in order. Read-only checks were added: a per-test first-error listing for command 3, the received values for classes (B) and (C) and for M3.1.2/7/8, a `provider-error` count for M3.3.2 and M3.3.5, and `git diff --stat` of the commits since `ce598d4`. HEAD is `d05f16f`, not the plan's `b8704a6`; the difference is only this work item's records.
+- Processes: no background job was used; every vitest run exited. No process started by this run is still running.
 
 ## Risks
 
