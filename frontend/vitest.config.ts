@@ -5,7 +5,7 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: './tests/environment/jsdom-node-abort.ts',
     globals: true,
     setupFiles: ['./tests/mocks/setup.ts'],
     coverage: {
