@@ -359,7 +359,7 @@ AUM-2's own completion evidence (a request through the account client reaching t
 | Milestone | Status | Evidence / Notes |
 | --- | --- | --- |
 | AUM-1 Contract (CONTRACT) | Complete — contract approved by Avinash Srivastava on 2026-11-16 | `docs/.ai/auth-consent/API-Contract.md` |
-| AUM-2 Frontend test request delivery (FOUNDATION) | Complete — executed and verified 2026-11-16 (`001_Implementation_Plan_AUM-2.md`) | See "AUM-2 evidence" below |
+| AUM-2 Frontend test request delivery (FOUNDATION) | Complete — executed and verified 2026-11-16 (`001_Implementation_Plan_AUM-2.md`) | See "AUM-2 evidence" below. Committed as 5815c7b |
 | AUM-3 Accounts and storage RED | Pending | |
 | AUM-4 Accounts and storage GREEN | Pending | |
 | AUM-5 Service access RED | Pending | |
